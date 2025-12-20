@@ -2,35 +2,25 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<title>真・結界師VR v8.0 — Boss & Puzzle Update</title>
+<title>真・結界師VR v9.2 — Elevator & Balance</title>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#87CEEB">
 <style>
   html, body { height: 100%; margin: 0; background: #87CEEB; color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
   canvas { display: block; width: 100%; height: 100%; outline: none; }
-   
   #error-log { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:#ff5555; padding:20px; z-index:9999; white-space:pre-wrap; font-weight:bold; overflow:auto; }
   #damage-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 60%, red 100%); opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.1s; }
-
   .novr-only { transition: opacity 0.5s; }
-
   #hud { position: fixed; top: 16px; left: 16px; pointer-events: none; z-index: 10; }
   @supports (padding-top: env(safe-area-inset-top)) { #hud { top: calc(env(safe-area-inset-top) + 10px); left: calc(env(safe-area-inset-left) + 16px); } }
-   
   .hud-box { background: rgba(0, 30, 60, 0.6); padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); margin-bottom: 8px; backdrop-filter: blur(4px); min-width: 140px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
   .big-text { font-size: 18px; font-weight: bold; color: #ffeb3b; text-shadow: 1px 1px 2px #000; }
   .sub-text { font-size: 14px; color: #fff; text-shadow: 1px 1px 1px #000; }
   .bar-bg { width: 100%; height: 8px; background: #555; margin-top: 4px; border-radius: 4px; overflow: hidden; }
   .hp-val { width: 100%; height: 100%; background: #0f0; transition: width 0.2s; }
   .sp-val { width: 100%; height: 100%; background: #00bfff; transition: width 0.1s; }
-   
-  #versionText { position: absolute; top: 0; right: -100px; font-size: 12px; color: rgba(255,255,255,0.8); text-shadow: 1px 1px 0 #000; font-weight:bold; }
-
   #msgArea { position: fixed; top: 35%; left: 0; width: 100%; text-align: center; pointer-events: none; z-index: 20; }
   .flash-msg { font-size: 60px; font-weight: 900; color: #fff; text-shadow: 0 0 10px #000, 2px 2px 0 #000; opacity: 0; transition: opacity 0.1s; white-space: pre-wrap; transform: scale(0.8); }
-  .mission-info { font-size: 20px; color: #fe0; font-weight: bold; margin-bottom: 4px; }
-
-  /* Mobile Controllers */
   #uiLayer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
   #stickZone { position: absolute; bottom: 30px; left: 30px; width: 140px; height: 140px; pointer-events: auto; margin-bottom: env(safe-area-inset-bottom); margin-left: env(safe-area-inset-left); }
   #padArea { position: absolute; bottom: 30px; right: 30px; width: 180px; height: 180px; pointer-events: none; margin-bottom: env(safe-area-inset-bottom); margin-right: env(safe-area-inset-right); }
@@ -43,26 +33,12 @@
   #btnLeft { top: 50%; left: 0; transform: translateY(-50%); background: linear-gradient(135deg, #f44336, #c62828); }
   #btnRight { top: 50%; right: 0; transform: translateY(-50%); background: linear-gradient(135deg, #03a9f4, #0288d1); width: 75px; height: 75px; font-size: 18px; }
   #btnRight.drawing { background: #fff; color: #0288d1; transform: translateY(-50%) scale(1.1); }
-  #modeSwitch { position: absolute; top: -60px; right: 0; width: 140px; height: 40px; background: rgba(0,0,0,0.6); border: 2px solid #fff; border-radius: 20px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; pointer-events:auto; transition: background 0.3s; }
+  #modeSwitch { position: absolute; top: -60px; right: 0; width: 140px; height: 40px; background: rgba(0,0,0,0.6); border: 2px solid #fff; border-radius: 20px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; pointer-events:auto; }
   #modeSwitch.phys { background: linear-gradient(90deg, #FFD700, #FF8C00); color:#000; border-color:#fff; }
   #modeSwitch.ghost { background: linear-gradient(90deg, #00bfff, #0000ff); color:#fff; border-color:#00ffff; }
-
-  @media (orientation: portrait) {
-    #stickZone { width: 110px; height: 110px; bottom: 20px; left: 10px; } .stick-knob { width: 45px; height: 45px; }
-    #padArea { width: 150px; height: 150px; bottom: 20px; right: 10px; } .btn { width: 50px; height: 50px; font-size: 10px; }
-    #btnDown, #btnRight { width: 55px; height: 55px; } #modeSwitch { top: -50px; width: 120px; height: 35px; font-size: 11px; }
-  }
-  @media (max-width: 360px) { #stickZone { width: 90px; height: 90px; bottom: 15px; left: 5px; } #padArea { width: 130px; height: 130px; bottom: 15px; right: 5px; } .btn { width: 45px; height: 45px; } }
-
   #centerReticle { position: fixed; top: 50%; left: 50%; width: 6px; height: 6px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; border: 1px solid rgba(0,0,0,0.5); z-index: 500; }
   #vrBtn { position: fixed; top: 10px; right: 10px; padding: 12px 24px; background: rgba(0,0,0,0.8); border: 2px solid #0f0; color: #0f0; border-radius: 8px; z-index: 200; pointer-events: auto; font-weight: bold; cursor: pointer; font-size: 16px; box-shadow: 0 0 10px #0f0; }
 </style>
-<script>
-  window.onerror = function(msg, url, line) {
-    const box = document.getElementById('error-log'); box.style.display = 'block';
-    box.textContent += "Error: " + msg + "\nLine: " + line + "\n"; return false;
-  };
-</script>
 <script type="importmap">
 {
   "imports": {
@@ -76,789 +52,214 @@
 <body>
 <div id="error-log"></div><div id="damage-overlay"></div>
 <div id="hud" class="novr-only">
-  <span id="versionText"></span>
   <div class="hud-box">
-    <div class="mission-info" id="missionText">通常ミッション</div>
-    <span class="big-text" id="waveVal">WAVE 1</span><br><span class="sub-text">ノルマ: <span id="targetVal" style="color:#f88;">10</span></span>
+    <div class="mission-info" id="missionText">Loading...</div>
+    <span class="big-text" id="waveVal">WAVE 1</span><br>
+    <span class="sub-text">ノルマ: <span id="targetVal" style="color:#f88;">-</span></span>
   </div>
   <div class="hud-box">
-    <span class="sub-text">HP: <span id="hpText">100</span></span>
-    <div class="bar-bg"><div id="hpBar" class="hp-val"></div></div>
-    <div style="height:4px;"></div>
-    <span class="sub-text" style="color:#00bfff;">SP: <span id="spText">100</span></span>
-    <div class="bar-bg"><div id="spBar" class="sp-val"></div></div>
+    <span class="sub-text">HP: <span id="hpText">100</span></span><div class="bar-bg"><div id="hpBar" class="hp-val"></div></div><div style="height:4px;"></div>
+    <span class="sub-text" style="color:#00bfff;">SP: <span id="spText">100</span></span><div class="bar-bg"><div id="spBar" class="sp-val"></div></div>
   </div>
-  <div class="hud-box" id="vipBox" style="display:none; border-color:#0f0;"><span class="sub-text" style="color:#0f0;">護衛対象 (脱出中)</span><div class="bar-bg"><div id="vipHpBar" class="hp-val" style="background:#0ff;"></div></div></div>
+  <div class="hud-box" id="vipBox" style="display:none; border-color:#0f0;"><span class="sub-text" style="color:#0f0;">護衛対象</span><div class="bar-bg"><div id="vipHpBar" class="hp-val" style="background:#0ff;"></div></div></div>
 </div>
-<div id="msgArea"><div id="flashMsg" class="flash-msg"></div></div><div id="centerReticle" class="novr-only"></div><button id="vrBtn">VR START</button>
-<div id="uiLayer" class="novr-only"><div id="stickZone"><div class="stick-base"><div id="stickKnob" class="stick-knob"></div></div></div><div id="padArea"><div id="modeSwitch" class="ghost">モード: 幽体</div><div id="btnUp" class="btn">距離<br><span id="distLabel" style="color:#fe0">近</span></div><div id="btnLeft" class="btn">滅<br><span style="font-size:10px">⇔解</span></div><div id="btnRight" class="btn">結<br><span style="font-size:10px">Hold</span></div><div id="btnDown" class="btn">跳</div></div></div>
+<div id="msgArea"><div id="flashMsg" class="flash-msg"></div></div>
+<div id="centerReticle" class="novr-only"></div>
+<button id="vrBtn">VR START</button>
+<div id="uiLayer" class="novr-only">
+  <div id="stickZone"><div class="stick-base"><div id="stickKnob" class="stick-knob"></div></div></div>
+  <div id="padArea">
+    <div id="modeSwitch" class="ghost">モード: 幽体</div>
+    <div id="btnUp" class="btn">距離<br><span id="distLabel" style="color:#fe0">近</span></div>
+    <div id="btnLeft" class="btn">滅<br><span style="font-size:10px">⇔解</span></div>
+    <div id="btnRight" class="btn">結<br><span style="font-size:10px">Hold</span></div>
+    <div id="btnDown" class="btn">跳</div>
+  </div>
+</div>
 
 <script type="module">
 import * as THREE from 'three'; 
 import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js'; 
 import * as CANNON from 'cannon-es';
 
-// --------------------------------------------------
-// 1. CONFIG
-// --------------------------------------------------
 const CFG = {
-  VERSION: "v8.0 Boss & Puzzle",
   colors: {
-    sky: 0x87CEEB, ground: 0xC2B280, 
-    kekkai: 0xffff00, ghost: 0x00ffff, 
-    drawPhys: 0xffff00, drawGhost: 0x00ffff,
-    highlight: 0xff0044,
-    marker: 0xff0000,
-    wall: 0xa0a0a0, building: 0xf0f0f0, pool: 0x88cccc,
+    sky: 0x87CEEB, ground: 0xC2B280, kekkai: 0xffff00, ghost: 0x00ffff,
+    drawPhys: 0xffff00, drawGhost: 0x00ffff, highlight: 0xff0044, marker: 0xff0000,
+    wall: 0xa0a0a0, building: 0xf0f0f0, 
     enemy: 0xff4444, giant: 0x880000, target: 0xFFD700, item: 0x00ff00, vip: 0x0000ff,
     wood: 0x8B4513, leaf: 0x228B22, iron: 0x333333, concrete: 0xaaaaaa,
     floater_high: 0xffffee, floater_low: 0xff8800, jumper: 0x00ff88,
     puzzle_1: 0xff0000, puzzle_2: 0x00ff00, puzzle_3: 0x0000ff, puzzle_core: 0xffff00
   },
   player: { speed: 10.0, jump: 22.0, height: 1.7, maxHp: 100, maxSp: 100 },
-  kekkai: { sensitivity: 300.0, spCostPerSec: 1.0, spRegen: 5.0, metsuCost: 1.0 },
-  dist: { min: 0.0, max: 40.0, default: 6.0 }, // Changed for analog control
-  aimAssist: { baseRadius: 1.5 }, 
+  kekkai: { sensitivity: 300.0, spCostPerSec: 1.0, spRegen: 5.0, metsuCost: 2.0 },
+  dist: { min: 0.0, max: 40.0, default: 6.0 },
+  aimAssist: { baseRadius: 1.5 },
   field: { width: 120, depth: 160 }
 };
 
-// --------------------------------------------------
-// 2. GLOBALS
-// --------------------------------------------------
 let scene, camera, renderer, world;
 let playerBody, playerGroup;
 let enemies = [], kekkaiList = [], items = [], vip = null;
-let gameState = { 
-  wave: 1, kills: 0, req: 10, nextSpawn: 0, 
-  playerHp: 100, playerSp: 100, 
-  missionType: 'normal', 
-  enemiesToSpawn: 0,
-  puzzle: null // { entities: [], currentStep: 0, respawnPoint: Vec3 }
-};
-let currentDist = CFG.dist.default, aimMarker, isPhysMode = false;
+let gameState = { wave: 1, req: 5, nextSpawn: 0, playerHp: 100, playerSp: 100, missionType: 'normal', enemiesToSpawn: 0, puzzle: null };
+let currentDist = CFG.dist.default, aimMarker, targetArrow, isPhysMode = false;
 let controllers = [], controllerGrips = [], vrHudMesh, vrHudCtx, vipGoalMesh = null;
-let currentSession = null, lastT = 0;
-
-let currentTargetKekkai = null; 
-
-const raycaster = new THREE.Raycaster();
-const _vecDir = new THREE.Vector3();
-const _vecPos = new THREE.Vector3();
-const _vecRight = new THREE.Vector3();
-const _vecUp = new THREE.Vector3(0, 1, 0);
-
-// VR State Extension
-let vrState = {
-  left: { 
-    drawing: false, startHandPos: new THREE.Vector3(), startOrigin: new THREE.Vector3(),
-    mesh: null, body: null, triggerHeld: false, xHeld: false, yHeld: false
-  },
-  right: { 
-    drawing: false, startHandPos: new THREE.Vector3(), startOrigin: new THREE.Vector3(),
-    mesh: null, triggerHeld: false, bBtnHeld: false, lastDistZ: 0
-  }
-};
+let lastT = 0, currentSession = null;
+let currentTargetKekkai = null;
 
 let input = { x: 0, y: 0 }, camAngle = { yaw: 0, pitch: 0 };
-let drawId = null, drawState = { active: false, startX: 0, startY: 0, ghost: null }, activePhysKekkai = null;
-let stickId = null, stickStart = { x: 0, y: 0 }, tapTime = 0, tapPos = { x: 0, y: 0 };
-let actId = null, actStartPos = { x: 0, y: 0 }, lookId = null, lastLook = { x: 0, y: 0 };
+let stickId=null, stickStart={x:0,y:0}, tapTime=0, tapPos={x:0,y:0};
+let lookId=null, lastLook={x:0,y:0}, actId=null, actStartPos={x:0,y:0};
+let drawId=null, activePhysKekkai=null, drawState = { active:false, startX:0, startY:0, ghost:null };
 
-const els = { stick: document.getElementById('stickZone'), knob: document.getElementById('stickKnob'), msg: document.getElementById('flashMsg'), btnDist: document.getElementById('btnUp'), btnJump: document.getElementById('btnDown'), btnAct: document.getElementById('btnLeft'), btnDraw: document.getElementById('btnRight'), modeBtn: document.getElementById('modeSwitch'), distLabel: document.getElementById('distLabel'), wVal: document.getElementById('waveVal'), tVal: document.getElementById('targetVal'), hpText: document.getElementById('hpText'), hpBar: document.getElementById('hpBar'), spText: document.getElementById('spText'), spBar: document.getElementById('spBar'), dmgOverlay: document.getElementById('damage-overlay'), vipBox: document.getElementById('vipBox'), vipHpBar: document.getElementById('vipHpBar'), novr: document.querySelectorAll('.novr-only'), version: document.getElementById('versionText'), missionText: document.getElementById('missionText') };
+let vrState = {
+  left: { drawing:false, startHandPos:new THREE.Vector3(), startOrigin:new THREE.Vector3(), startDir:new THREE.Vector3(), mesh:null, body:null, triggerHeld:false },
+  right: { drawing:false, startHandPos:new THREE.Vector3(), startOrigin:new THREE.Vector3(), startDir:new THREE.Vector3(), mesh:null, triggerHeld:false, bBtnHeld:false, lastDistZ:0 }
+};
 
-// --------------------------------------------------
-// 3. HELPER FUNCTIONS
-// --------------------------------------------------
-function showMsg(t, c) { 
-  els.msg.textContent = t; els.msg.style.color = c; els.msg.style.opacity = 1; 
-  setTimeout(() => els.msg.style.opacity = 0, 500); 
-}
+const raycaster = new THREE.Raycaster();
+const _vecDir = new THREE.Vector3(), _vecPos = new THREE.Vector3(), _vecRight = new THREE.Vector3(), _vecUp = new THREE.Vector3(0,1,0);
 
+const els = { stick: document.getElementById('stickZone'), knob: document.getElementById('stickKnob'), msg: document.getElementById('flashMsg'), btnDist: document.getElementById('btnUp'), btnJump: document.getElementById('btnDown'), btnAct: document.getElementById('btnLeft'), btnDraw: document.getElementById('btnRight'), modeBtn: document.getElementById('modeSwitch'), distLabel: document.getElementById('distLabel'), wVal: document.getElementById('waveVal'), tVal: document.getElementById('targetVal'), hpText: document.getElementById('hpText'), hpBar: document.getElementById('hpBar'), spText: document.getElementById('spText'), spBar: document.getElementById('spBar'), dmgOverlay: document.getElementById('damage-overlay'), vipBox: document.getElementById('vipBox'), vipHpBar: document.getElementById('vipHpBar'), novr: document.querySelectorAll('.novr-only'), missionText: document.getElementById('missionText') };
+
+function showMsg(t, c) { els.msg.textContent = t; els.msg.style.color = c; els.msg.style.opacity = 1; setTimeout(() => els.msg.style.opacity = 0, 800); }
 function spawnText(s, p, c) { 
-  const cvs = document.createElement('canvas'); cvs.width = 128; cvs.height = 64; 
-  const ctx = cvs.getContext('2d'); ctx.font = "bold 48px sans-serif"; ctx.fillStyle = c; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s, 64, 32); 
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cvs), transparent: true })); 
-  sp.position.copy(p); sp.scale.set(3, 1.5, 3); scene.add(sp); 
-  setTimeout(() => { if(sp.parent) { scene.remove(sp); sp.material.map.dispose(); sp.geometry.dispose(); } }, 500);
-  let f = 0; const a = () => { if(!sp.parent) return; f += 0.2; sp.position.y += 0.05; sp.material.opacity = 1 - f; if (f < 1) requestAnimationFrame(a); else { safeRemoveMesh(sp); } }; a(); 
+  const cvs=document.createElement('canvas'); cvs.width=128; cvs.height=64; const ctx=cvs.getContext('2d'); ctx.font="bold 48px sans-serif"; ctx.fillStyle=c; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(s,64,32); 
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cvs), transparent:true})); sp.position.copy(p); sp.scale.set(3,1.5,3); scene.add(sp);
+  let f=0; const a=()=>{ if(!sp.parent)return; f+=0.1; sp.position.y+=0.05; sp.material.opacity=1-f; if(f<1)requestAnimationFrame(a); else safeRemoveMesh(sp); }; a();
 }
-
-function spawnParticle(p, n, c) { 
-  const g = new THREE.BoxGeometry(0.25, 0.25, 0.25), m = new THREE.MeshBasicMaterial({ color: c }); 
-  const particles = [];
-  for (let i = 0; i < n; i++) { 
-    const me = new THREE.Mesh(g, m); me.position.copy(p).add(new THREE.Vector3((Math.random() - .5) * 2, (Math.random() - .5) * 2, (Math.random() - .5) * 2)); scene.add(me); 
-    const v = new THREE.Vector3(Math.random() - .5, Math.random() - .5, Math.random() - .5).multiplyScalar(1.5); 
-    particles.push({ mesh: me, v: v });
+function spawnParticle(p, n, c) {
+  const g=new THREE.BoxGeometry(0.2,0.2,0.2); const m=new THREE.MeshBasicMaterial({color:c});
+  for(let i=0;i<n;i++){
+    const me=new THREE.Mesh(g,m); me.position.copy(p).add(new THREE.Vector3((Math.random()-.5)*2, (Math.random()-.5)*2, (Math.random()-.5)*2)); scene.add(me);
+    const v=new THREE.Vector3(Math.random()-.5, Math.random()-.5, Math.random()-.5).multiplyScalar(1.5);
+    const a=()=>{ if(!me.parent)return; me.position.add(v); me.scale.multiplyScalar(0.8); if(me.scale.x>0.05)requestAnimationFrame(a); else safeRemoveMesh(me); }; a();
   }
-  setTimeout(() => { particles.forEach(o => safeRemoveMesh(o.mesh)); }, 500);
-  const a = () => { let active = false; particles.forEach(o => { if(!o.mesh.parent) return; o.mesh.position.add(o.v); o.mesh.scale.multiplyScalar(0.7); if (o.mesh.scale.x > 0.05) active = true; else safeRemoveMesh(o.mesh); }); if(active) requestAnimationFrame(a); }; a(); 
 }
+function safeRemoveMesh(mesh) { if(!mesh||!mesh.parent)return; scene.remove(mesh); if(mesh.geometry)mesh.geometry.dispose(); if(mesh.material){ if(Array.isArray(mesh.material))mesh.material.forEach(m=>m.dispose()); else mesh.material.dispose(); } }
 
-function safeRemoveMesh(mesh) { 
-  if(!mesh || !mesh.parent) return; scene.remove(mesh); 
-  if(mesh.geometry) mesh.geometry.dispose(); 
-  if(mesh.material) { if(Array.isArray(mesh.material)) mesh.material.forEach(m => m.dispose()); else mesh.material.dispose(); } 
-}
-
-function updateHUD() { 
-  els.hpText.textContent = Math.floor(gameState.playerHp);
-  els.hpBar.style.width = (gameState.playerHp / CFG.player.maxHp * 100) + "%";
-  els.hpBar.style.backgroundColor = gameState.playerHp < 30 ? "#f00" : "#0f0";
-  
-  els.spText.textContent = Math.floor(gameState.playerSp);
-  els.spBar.style.width = (gameState.playerSp / CFG.player.maxSp * 100) + "%";
-  els.spBar.style.backgroundColor = gameState.playerSp < 20 ? "#f00" : "#00bfff";
-
-  els.wVal.textContent = "WAVE " + gameState.wave; 
-  els.tVal.textContent = gameState.req > 0 ? gameState.req : "CLEAR!";
-
-  if (renderer.xr.isPresenting && vrHudCtx) { 
-    const ctx = vrHudCtx; ctx.clearRect(0, 0, 512, 128); 
-    ctx.fillStyle = "rgba(0, 20, 40, 0.6)"; ctx.fillRect(0,0,512,128); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.strokeRect(2,2,508,124); 
-    
-    ctx.font = "bold 24px sans-serif"; ctx.fillStyle = "#ffeb3b"; ctx.fillText(`WAVE ${gameState.wave}`, 20, 30); 
-    let mName = "通常";
-    if(gameState.missionType==='annihilation') mName="殲滅戦";
-    else if(gameState.missionType==='hunt') mName="討伐戦";
-    else if(gameState.missionType==='boss_composite') mName="巨大ボス討伐";
-    else if(gameState.missionType==='boss_puzzle') mName="四体連携撃破";
-    else if(gameState.missionType==='vip') mName="護衛";
-    ctx.font = "20px sans-serif"; ctx.fillStyle = "#fff"; ctx.fillText(mName + ": 残 " + gameState.req, 20, 60);
-    ctx.fillText(`距離: ${currentDist.toFixed(1)}m`, 20, 90);
-
-    ctx.fillStyle = gameState.playerHp < 30 ? "#f55" : "#0f0"; ctx.fillText(`HP: ${Math.floor(gameState.playerHp)}`, 300, 30); 
-    ctx.fillStyle = "#555"; ctx.fillRect(300, 35, 180, 15); ctx.fillStyle = gameState.playerHp < 30 ? "#f00" : "#0f0"; ctx.fillRect(300, 35, 180 * (gameState.playerHp / CFG.player.maxHp), 15); 
-
-    ctx.fillStyle = "#0ff"; ctx.fillText(`SP: ${Math.floor(gameState.playerSp)}`, 300, 75); 
-    ctx.fillStyle = "#555"; ctx.fillRect(300, 80, 180, 15); ctx.fillStyle = gameState.playerSp < 20 ? "#f00" : "#00bfff"; ctx.fillRect(300, 80, 180 * (gameState.playerSp / CFG.player.maxSp), 15); 
-    
-    if (gameState.isVipMode && vip) { ctx.fillStyle = "#0ff"; ctx.fillText(`VIP: ${vip.hp}%`, 20, 115); } 
-    vrHudMesh.material.map.needsUpdate = true; 
+function updateHUD() {
+  els.hpText.textContent=Math.floor(gameState.playerHp); els.hpBar.style.width=(gameState.playerHp)+"%"; els.hpBar.style.backgroundColor=gameState.playerHp<30?"#f00":"#0f0";
+  els.spText.textContent=Math.floor(gameState.playerSp); els.spBar.style.width=(gameState.playerSp)+"%"; els.spBar.style.backgroundColor=gameState.playerSp<20?"#f00":"#00bfff";
+  els.wVal.textContent="WAVE "+gameState.wave; els.tVal.textContent=gameState.req>0?gameState.req:"CLEAR!";
+  if(renderer.xr.isPresenting && vrHudCtx){
+    const ctx=vrHudCtx; ctx.clearRect(0,0,512,128); ctx.fillStyle="rgba(0,20,40,0.6)"; ctx.fillRect(0,0,512,128); ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.strokeRect(2,2,508,124);
+    ctx.font="bold 24px sans-serif"; ctx.fillStyle="#ffeb3b"; ctx.fillText(`WAVE ${gameState.wave}`,20,30);
+    ctx.font="20px sans-serif"; ctx.fillStyle="#fff"; ctx.fillText(`残: ${gameState.req}`,20,60); ctx.fillText(`距離: ${currentDist.toFixed(1)}m`,20,90);
+    ctx.fillStyle=gameState.playerHp<30?"#f55":"#0f0"; ctx.fillText(`HP: ${Math.floor(gameState.playerHp)}`,300,30);
+    ctx.fillStyle="#555"; ctx.fillRect(300,35,180,15); ctx.fillStyle=gameState.playerHp<30?"#f00":"#0f0"; ctx.fillRect(300,35,180*(gameState.playerHp/100),15);
+    ctx.fillStyle="#0ff"; ctx.fillText(`SP: ${Math.floor(gameState.playerSp)}`,300,75);
+    ctx.fillStyle="#555"; ctx.fillRect(300,80,180,15); ctx.fillStyle=gameState.playerSp<20?"#f00":"#00bfff"; ctx.fillRect(300,80,180*(gameState.playerSp/100),15);
+    if(vip) { ctx.fillStyle="#0ff"; ctx.fillText(`VIP: ${vip.hp}%`,20,115); }
+    vrHudMesh.material.map.needsUpdate=true;
   }
 }
 
-function updateSP(dt) {
-  gameState.playerSp = Math.min(CFG.player.maxSp, gameState.playerSp + CFG.kekkai.spRegen * dt);
-  let drain = kekkaiList.length * CFG.kekkai.spCostPerSec;
-  if ((vrState.left.drawing && isPhysMode) || (vrState.right.drawing && isPhysMode) || (activePhysKekkai)) {
-    drain += CFG.kekkai.spCostPerSec;
+function createKekkai(p, s, r, isGhost=false) {
+  // Collision Group 2. Mask: 1(Player)|2(Kekkai)|4(Enemy)
+  const b = new CANNON.Body({ mass: 0, material: new CANNON.Material('kek'), collisionFilterGroup: 2, collisionFilterMask: 1|2|4 });
+  b.position.copy(p); b.quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0), r);
+  if(!isGhost) { b.addShape(new CANNON.Box(new CANNON.Vec3(s.x/2, s.y/2, s.z/2))); } 
+  else { 
+     const t=0.5, x=s.x/2, y=s.y/2, z=s.z/2;
+     b.addShape(new CANNON.Box(new CANNON.Vec3(t,y,z)), new CANNON.Vec3(-x,0,0)); b.addShape(new CANNON.Box(new CANNON.Vec3(t,y,z)), new CANNON.Vec3(x,0,0));
+     b.addShape(new CANNON.Box(new CANNON.Vec3(x,t,z)), new CANNON.Vec3(0,-y,0)); b.addShape(new CANNON.Box(new CANNON.Vec3(x,t,z)), new CANNON.Vec3(0,y,0));
+     b.addShape(new CANNON.Box(new CANNON.Vec3(x,y,t)), new CANNON.Vec3(0,0,-z)); b.addShape(new CANNON.Box(new CANNON.Vec3(x,y,t)), new CANNON.Vec3(0,0,z));
   }
-  gameState.playerSp -= drain * dt;
-  if (gameState.playerSp <= 0) {
-    gameState.playerSp = 0;
-    if (kekkaiList.length > 0) {
-      actionGlobalKai();
-      showMsg("霊力枯渇!!", "#f00");
-    }
+  world.addBody(b);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), new THREE.MeshPhongMaterial({color: isGhost?CFG.colors.ghost:CFG.colors.kekkai, transparent:true, opacity:isGhost?0.3:0.5, side:THREE.DoubleSide}));
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({color:0xffffff, transparent:true, opacity:0.5}));
+  m.add(edges); m.position.copy(p); m.rotation.y = r; scene.add(m);
+  kekkaiList.push({ body:b, mesh:m, edges:edges, shrinking:false, isGhost });
+  spawnText("結", p, isGhost?"#0ff":"#ff0");
+}
+
+function spawnEnemy(forceType=null) {
+  if (gameState.missionType === 'annihilation' && gameState.enemiesToSpawn <= 0) return;
+  if (gameState.missionType.startsWith('boss')) return; 
+  if (enemies.length >= 15) return;
+  const r = Math.random(); let x, y, z; const fW=CFG.field.width, fD=CFG.field.depth;
+  if (r<0.6) { x=(Math.random()-.5)*fW; z=(Math.random()-.5)*fD; y=20; }
+  else if (r<0.8) { x=(Math.random()-.5)*(fW-5); z=(-fD / 2 - 20)+(Math.random()-.5)*30; y=35; }
+  else { x=(fW/2-25)+(Math.random()-.5)*20; z=(Math.random()-.5)*50; y=10; }
+
+  const hpMult = 1 + Math.floor((gameState.wave-1)/5); // Scale HP with loop
+
+  if (forceType==='target') {
+    const sz=1.2; const b=new CANNON.Body({mass:20, shape:new CANNON.Sphere(sz), material:new CANNON.Material('ene'), linearDamping:0.4, collisionFilterGroup:4, collisionFilterMask:1|2|4});
+    b.position.set(x,y,z); world.addBody(b);
+    const m=new THREE.Mesh(new THREE.IcosahedronGeometry(sz,1), new THREE.MeshStandardMaterial({color:0xFFD700, emissive:0xffaa00, emissiveIntensity:0.5}));
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(sz*1.5,0.05,8,24), new THREE.MeshBasicMaterial({color:0xffcc00})); ring.rotation.x=Math.PI/2; m.add(ring);
+    scene.add(m); enemies.push({body:b, mesh:m, isTarget:true, hp:5*hpMult, time:0});
+  } else {
+    let type='normal', sz=0.6+Math.random()*0.8, col=new THREE.Color().setHSL(Math.random(),0.8,0.5), ms=15*sz;
+    const typeR=Math.random();
+    if(typeR<0.2){ type='floater_high'; col.setHex(CFG.colors.floater_high); y=15; ms=5; }
+    else if(typeR<0.4){ type='floater_low'; col.setHex(CFG.colors.floater_low); y=5; ms=10; }
+    else if(typeR<0.6){ type='jumper'; col.setHex(CFG.colors.jumper); y=5; ms=20; }
+    const b=new CANNON.Body({mass:ms, shape:new CANNON.Sphere(sz), material:new CANNON.Material('ene'), linearDamping:0.4, collisionFilterGroup:4, collisionFilterMask:1|2|4});
+    b.position.set(x,y,z); world.addBody(b);
+    let geo; if(type==='floater_high')geo=new THREE.OctahedronGeometry(sz,0); else if(type==='floater_low')geo=new THREE.ConeGeometry(sz,sz*2,8); else if(type==='jumper')geo=new THREE.TorusGeometry(sz*0.6,sz*0.2,8,16); else geo=new THREE.IcosahedronGeometry(sz,0);
+    const m=new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:col})); if(type==='floater_low')m.rotation.x=Math.PI/2;
+    scene.add(m); enemies.push({body:b, mesh:m, type, hp:1*hpMult});
   }
-  updateHUD();
+  if (gameState.missionType==='annihilation') gameState.enemiesToSpawn--;
 }
 
-function takeDamage(val) { 
-  gameState.playerHp = Math.max(0, gameState.playerHp - val); 
-  els.dmgOverlay.style.opacity = 0.5; setTimeout(() => els.dmgOverlay.style.opacity = 0, 150); 
-  if (gameState.playerHp <= 0) showMsg("GAME OVER", "#f00"); 
-}
-function healPlayer(val) { gameState.playerHp = Math.min(CFG.player.maxHp, gameState.playerHp + val); showMsg("RECOVER!", "#0f0"); }
-
-function removeKekkai(k) { 
-  if(currentTargetKekkai === k) currentTargetKekkai = null;
-  safeRemoveMesh(k.mesh); if(k.body) world.removeBody(k.body); kekkaiList = kekkaiList.filter(o => o !== k); 
-}
-
-function createKekkai(p, s, r, isGhost=false) { 
-  // 確定時の結界は衝突グループ 1(Player) | 2(Default) | 4(Enemy) すべてと衝突
-  const b = new CANNON.Body({ mass: 0, material: new CANNON.Material('kek'), collisionFilterGroup: 1, collisionFilterMask: 1|2|4 }); 
-  b.position.copy(p); b.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), r); 
-  const t = 0.5; const x = s.x/2, y = s.y/2, z = s.z/2; 
-  if (!isGhost) { 
-    b.addShape(new CANNON.Box(new CANNON.Vec3(x, y, z))); 
-  } else { 
-    b.addShape(new CANNON.Box(new CANNON.Vec3(t, y, z)), new CANNON.Vec3(-x, 0, 0)); 
-    b.addShape(new CANNON.Box(new CANNON.Vec3(t, y, z)), new CANNON.Vec3(x, 0, 0)); 
-    b.addShape(new CANNON.Box(new CANNON.Vec3(x, t, z)), new CANNON.Vec3(0, -y, 0)); 
-    b.addShape(new CANNON.Box(new CANNON.Vec3(x, t, z)), new CANNON.Vec3(0, y, 0)); 
-    b.addShape(new CANNON.Box(new CANNON.Vec3(x, y, t)), new CANNON.Vec3(0, 0, -z)); 
-    b.addShape(new CANNON.Box(new CANNON.Vec3(x, y, t)), new CANNON.Vec3(0, 0, z)); 
-  } 
-  world.addBody(b); 
-  
-  const color = isGhost ? CFG.colors.ghost : CFG.colors.kekkai; 
-  const g = new THREE.BoxGeometry(s.x, s.y, s.z); 
-  const m = new THREE.MeshPhongMaterial({ color: color, transparent: true, opacity: isGhost ? 0.3 : 0.5, side: THREE.DoubleSide }); 
-  const mesh = new THREE.Mesh(g, m); 
-  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
-  mesh.add(edges); 
-  mesh.position.copy(p); mesh.rotation.y = r; scene.add(mesh); 
-  kekkaiList.push({ body: b, mesh: mesh, edges: edges, shrinking: false, isGhost: isGhost }); 
-  spawnText("結", p, isGhost ? "#0ff" : "#ff0"); 
-}
-
-function spawnItem(pos) { 
-  const b = new CANNON.Body({ mass: 1, shape: new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)), material: new CANNON.Material('item') }); b.position.copy(pos); world.addBody(b); 
-  const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: CFG.colors.item, wireframe: true })); m.position.copy(pos); scene.add(m); 
-  m.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial({ color: CFG.colors.item }))); 
-  items.push({ body: b, mesh: m }); 
-}
-
-function removeEnemy(e) { if (!enemies.includes(e)) return; enemies = enemies.filter(o => o !== e); scene.remove(e.mesh); world.removeBody(e.body); }
-
-function nextWave() {
-  gameState.wave++;
-  startWave();
-}
-
-function killEnemy(e, isEscape=false) { 
-  if (!enemies.includes(e)) return; 
-  
-  // Composite Boss Logic
-  if (e.isCompositePart) {
-      // 部位破壊
-      spawnParticle(e.mesh.position, 15, 0xffaa00);
-      removeEnemy(e);
-      spawnText("部位破壊", e.body.position, "#fa0");
-      // Check if parent dead
-      const parent = enemies.find(en => en.body.id === e.parentId);
-      if(parent) {
-          parent.partsCount--;
-          if(parent.partsCount <= 0) {
-              spawnText("討伐完了", parent.body.position, "#f00");
-              spawnParticle(parent.mesh.position, 50, 0xff0000);
-              removeEnemy(parent); // 本体消去
-              gameState.req = 0; // Boss defeated
-          }
-      }
-      return; 
-  }
-  if (e.isCompositeCore) return; // Core itself doesn't take damage directly until parts gone logic handles it
-
-  // Puzzle Boss Logic
-  if (e.isPuzzleMinion && !isEscape) {
-      spawnParticle(e.mesh.position, 15, e.puzzleColor);
-      removeEnemy(e);
-      // Check Order
-      if (e.puzzleIndex === gameState.puzzle.currentStep) {
-          gameState.puzzle.currentStep++;
-          spawnText("OK!", e.body.position, "#fff");
-          if (gameState.puzzle.currentStep === 3) {
-              // Core becomes vulnerable
-              const core = enemies.find(en => en.isPuzzleCore);
-              if(core) {
-                  core.isInvincible = false;
-                  core.mesh.material.color.setHex(0xff0000); // Red to signal danger/vulnerability
-                  spawnText("本体防御解除!", core.mesh.position, "#f00");
-              }
-          }
-      } else {
-          // Wrong order -> Respawn ALL
-          spawnText("順序不正! 再生!", e.body.position, "#f00");
-          gameState.puzzle.currentStep = 0;
-          // Clean up existing minions
-          [...enemies].forEach(en => { if(en.isPuzzleMinion) removeEnemy(en); });
-          // Respawn 3 minions at Core pos
-          const core = enemies.find(en => en.isPuzzleCore);
-          const pos = core ? core.body.position : new CANNON.Vec3(0,20,0);
-          setTimeout(() => spawnPuzzleBossMinions(pos.x, pos.y, pos.z), 1000);
-      }
-      return;
-  }
-  if (e.isPuzzleCore) {
-      if (e.isInvincible && !isEscape) {
-          spawnText("無敵", e.mesh.position, "#888");
-          // Apply pushback
-          const push = e.body.position.vsub(playerBody.position); push.normalize();
-          e.body.applyImpulse(push.scale(100), e.body.position);
+function killEnemy(e, isEscape=false) {
+  if(!enemies.includes(e))return;
+  if(e.isCompositePart || e.isPuzzleMinion || e.isPuzzleCore || e.isCompositeCore) {
+      if(e.isCompositePart) { spawnParticle(e.mesh.position,15,0xffaa00); removeEnemy(e); const p=enemies.find(en=>en.body.id===e.parentId); if(p){p.partsCount--; if(p.partsCount<=0)killEnemy(p);} return; }
+      if(e.isPuzzleMinion) { 
+          spawnParticle(e.mesh.position,15,e.puzzleColor); removeEnemy(e); 
+          if(e.puzzleIndex===gameState.puzzle.currentStep) { gameState.puzzle.currentStep++; spawnText("OK!",e.body.position,"#fff"); if(gameState.puzzle.currentStep===3) { const c=enemies.find(en=>en.isPuzzleCore); if(c){c.isInvincible=false; c.mesh.material.color.setHex(0xff0000); spawnText("防御解除!",c.mesh.position,"#f00");} } }
+          else { spawnText("順序不正!",e.body.position,"#f00"); gameState.puzzle.currentStep=0; [...enemies].forEach(en=>{if(en.isPuzzleMinion)removeEnemy(en)}); const c=enemies.find(en=>en.isPuzzleCore); setTimeout(()=>spawnPuzzleBossMinions(c?c.body.position.x:0, 20, c?c.body.position.z:-30), 1000); }
           return;
       }
-      // Kill Core -> Win
-      gameState.req = 0;
+      if(e.isPuzzleCore && e.isInvincible && !isEscape) { spawnText("無敵", e.mesh.position, "#888"); const push = e.body.position.vsub(playerBody.position); push.normalize(); e.body.applyImpulse(push.scale(100), e.body.position); return; }
   }
-
-  // Normal Logic
-  if (e.hp > 0 && !isEscape) { 
-    e.hp--; spawnParticle(e.mesh.position, 10, 0xffaa00); 
-    const push = playerBody.position.vsub(e.body.position); push.normalize(); 
-    e.body.applyImpulse(push.scale(-500), e.body.position); 
-    if (e.hp > 0) return; 
-  } 
+  if(e.hp>0 && !isEscape){ e.hp--; spawnParticle(e.mesh.position,10,0xffaa00); const push=playerBody.position.vsub(e.body.position); push.normalize(); e.body.applyImpulse(push.scale(-500),e.body.position); if(e.hp>0)return; }
+  removeEnemy(e);
+  if(!isEscape) { spawnParticle(e.mesh.position,25,0xff0000); if(Math.random()<0.3) spawnItem(e.body.position); }
   
-  removeEnemy(e); 
-  if(!isEscape) {
-    spawnParticle(e.mesh.position, 25, 0xff0000); 
-    if (Math.random() < 0.3) spawnItem(e.body.position); 
-  }
-
-  let progress = false;
-  if (gameState.missionType === 'hunt') {
-    if (e.isTarget) { gameState.req = 0; progress = true; } 
-  } else {
-    if (gameState.req > 0) {
-      gameState.req--;
-      progress = true;
-    }
-  }
-
-  if (progress && gameState.req <= 0) {
-    showMsg(`WAVE ${gameState.wave} CLEAR`, "#fe0");
-    if(vip) { world.removeBody(vip.body); scene.remove(vip.mesh); vip=null; els.vipBox.style.display="none"; if(vipGoalMesh) {scene.remove(vipGoalMesh); vipGoalMesh=null;} }
-    [...enemies].forEach(en => removeEnemy(en));
-    setTimeout(nextWave, 2000);
+  let p=false;
+  if(gameState.missionType==='hunt'){ if(e.isTarget){gameState.req=0; p=true;} }
+  else if(gameState.req>0){ gameState.req--; p=true; }
+  if(p && gameState.req<=0) {
+      showMsg(`WAVE ${gameState.wave} CLEAR`, "#fe0");
+      if(vip){ world.removeBody(vip.body); scene.remove(vip.mesh); vip=null; els.vipBox.style.display="none"; if(vipGoalMesh){scene.remove(vipGoalMesh); vipGoalMesh=null;} }
+      [...enemies].forEach(en=>removeEnemy(en)); setTimeout(nextWave, 2000);
   }
 }
-
-// Boss 1: Composite (Giant)
-function spawnCompositeBoss() {
-  const x = 0, y = 20, z = -40;
-  // Core (Hidden logic holder)
-  const coreBody = new CANNON.Body({ mass: 0, collisionFilterGroup: 0 }); // No collision
-  coreBody.position.set(x, y, z); coreBody.id = -9999; // Dummy ID
-  const coreMesh = new THREE.Group();
-  scene.add(coreMesh);
-  
-  const parent = { body: coreBody, mesh: coreMesh, isCompositeCore: true, partsCount: 0 };
-  enemies.push(parent);
-  
-  // Parts helper
-  const addPart = (px, py, pz, sx, sy, sz, hp) => {
-      const b = new CANNON.Body({ mass: 50, material: new CANNON.Material('ene'), linearDamping: 0.9 });
-      b.addShape(new CANNON.Box(new CANNON.Vec3(sx/2, sy/2, sz/2)));
-      b.position.set(x+px, y+py, z+pz);
-      b.collisionFilterGroup = 4; b.collisionFilterMask = 1|2|4;
-      world.addBody(b);
-      const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), new THREE.MeshStandardMaterial({ color: CFG.colors.giant }));
-      scene.add(m);
-      enemies.push({ body: b, mesh: m, isCompositePart: true, parentId: coreBody.id, hp: hp });
-      parent.partsCount++;
-  };
-  
-  // Legs
-  addPart(-5, -10, 0, 3, 10, 3, 5); // L Leg
-  addPart(5, -10, 0, 3, 10, 3, 5);  // R Leg
-  // Arms
-  addPart(-8, 5, 0, 3, 8, 3, 5);    // L Arm
-  addPart(8, 5, 0, 3, 8, 3, 5);     // R Arm
-  // Head/Body
-  addPart(0, 0, 0, 6, 10, 4, 10);   // Torso
-  addPart(0, 8, 0, 4, 4, 4, 5);     // Head
-}
-
-// Boss 2: Puzzle (4 Entities)
-function spawnPuzzleBoss() {
-  const cx = 0, cy = 20, cz = -30;
-  
-  // Core (Passive)
-  const b = new CANNON.Body({ mass: 100, shape: new CANNON.Sphere(2), material: new CANNON.Material('ene'), linearDamping: 0.9 });
-  b.position.set(cx, cy, cz);
-  b.collisionFilterGroup = 4; b.collisionFilterMask = 1|2|4;
-  world.addBody(b);
-  const m = new THREE.Mesh(new THREE.DodecahedronGeometry(2), new THREE.MeshStandardMaterial({ color: CFG.colors.puzzle_core, metalness:0.8, roughness:0.2 }));
-  scene.add(m);
-  
-  // Shield effect
-  const sGeo = new THREE.SphereGeometry(3, 16, 16);
-  const sMat = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent:true, opacity: 0.3, wireframe:true });
-  const shield = new THREE.Mesh(sGeo, sMat);
-  m.add(shield);
-  
-  enemies.push({ body: b, mesh: m, isPuzzleCore: true, isInvincible: true, hp: 10 });
-  
-  gameState.puzzle = { currentStep: 0 };
-  spawnPuzzleBossMinions(cx, cy, cz);
-}
-
-function spawnPuzzleBossMinions(cx, cy, cz) {
-    const configs = [
-        { color: CFG.colors.puzzle_1, idx: 0, label: "1" },
-        { color: CFG.colors.puzzle_2, idx: 1, label: "2" },
-        { color: CFG.colors.puzzle_3, idx: 2, label: "3" }
-    ];
-    
-    configs.forEach((c, i) => {
-        const angle = (i / 3) * Math.PI * 2;
-        const x = cx + Math.cos(angle) * 10;
-        const z = cz + Math.sin(angle) * 10;
-        
-        const b = new CANNON.Body({ mass: 20, shape: new CANNON.Box(new CANNON.Vec3(1,1,1)), material: new CANNON.Material('ene'), linearDamping: 0.5 });
-        b.position.set(x, cy, z);
-        b.collisionFilterGroup = 4; b.collisionFilterMask = 1|2|4;
-        world.addBody(b);
-        
-        const m = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({ color: c.color }));
-        scene.add(m);
-        
-        // Number Label
-        const cvs = document.createElement('canvas'); cvs.width=64; cvs.height=64;
-        const ctx = cvs.getContext('2d'); ctx.fillStyle="#fff"; ctx.font="bold 50px sans-serif"; ctx.fillText(c.label, 15, 50);
-        const tex = new THREE.CanvasTexture(cvs);
-        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex }));
-        sp.scale.set(3,3,3); sp.position.y = 2.5; m.add(sp);
-        
-        enemies.push({ body: b, mesh: m, isPuzzleMinion: true, puzzleIndex: c.idx, puzzleColor: c.color, hp: 3 });
-    });
-}
-
-function spawnEnemy(forceType=null) { 
-  if (gameState.missionType === 'annihilation') {
-    if (gameState.enemiesToSpawn <= 0) return; 
-  }
-  if (gameState.missionType.startsWith('boss')) return; // Boss handles spawn
-  if (enemies.length >= 15) return; 
-
-  const r = Math.random(); let x, y, z; const fW = CFG.field.width, fD = CFG.field.depth; 
-  if (r < 0.6) { x = (Math.random() - .5) * fW; z = (Math.random() - .5) * fD; y = 20; } 
-  else if (r < 0.8) { x = (Math.random() - .5) * (fW - 5); z = (-fD / 2 - 20) + (Math.random() - .5) * 30; y = 35; } 
-  else { x = (fW / 2 - 25) + (Math.random() - .5) * 20; z = (Math.random() - .5) * 50; y = 10; } 
-  
-  if (forceType === 'target') {
-    const sz = 1.2; const b = new CANNON.Body({ mass: 20, shape: new CANNON.Sphere(sz), material: new CANNON.Material('ene'), linearDamping: 0.4, collisionFilterGroup: 4, collisionFilterMask: 1|2|4 }); 
-    b.position.set(x, y, z); world.addBody(b); b.outsideTimer = 0; 
-    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(sz, 1), new THREE.MeshStandardMaterial({ color: CFG.colors.target, roughness: 0.1, metalness: 0.8 })); 
-    scene.add(m); enemies.push({ body: b, mesh: m, isTarget: true, hp: 5 });
-  } else { 
-    const typeR = Math.random();
-    let type = 'normal';
-    let sz = 0.6 + Math.random() * 0.8;
-    let col = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
-    let ms = 15 * sz;
-
-    if (typeR < 0.2) { type = 'floater_high'; col = new THREE.Color(CFG.colors.floater_high); y = 15; ms = 5; } 
-    else if (typeR < 0.4) { type = 'floater_low'; col = new THREE.Color(CFG.colors.floater_low); y = 5; ms = 10; } 
-    else if (typeR < 0.6) { type = 'jumper'; col = new THREE.Color(CFG.colors.jumper); y = 5; ms = 20; }
-
-    const b = new CANNON.Body({ mass: ms, shape: new CANNON.Sphere(sz), material: new CANNON.Material('ene'), linearDamping: 0.4, collisionFilterGroup: 4, collisionFilterMask: 1|2|4 }); 
-    b.position.set(x, y, z); world.addBody(b); b.outsideTimer = 0; 
-    
-    let geo;
-    if(type === 'floater_high') geo = new THREE.OctahedronGeometry(sz, 0);
-    else if(type === 'floater_low') geo = new THREE.ConeGeometry(sz, sz*2, 8);
-    else if(type === 'jumper') geo = new THREE.TorusGeometry(sz*0.6, sz*0.2, 8, 16);
-    else geo = new THREE.IcosahedronGeometry(sz, 0);
-
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: col, roughness: 0.3 })); 
-    if(type === 'floater_low') m.rotation.x = Math.PI/2; 
-
-    scene.add(m); 
-    enemies.push({ body: b, mesh: m, isGiant: false, type: type, hp: 1 }); 
-  } 
-
-  if (gameState.missionType === 'annihilation') gameState.enemiesToSpawn--;
-}
-
+function removeEnemy(e) { if(!enemies.includes(e))return; enemies=enemies.filter(o=>o!==e); scene.remove(e.mesh); world.removeBody(e.body); }
+function spawnItem(pos) { const b=new CANNON.Body({mass:1, shape:new CANNON.Box(new CANNON.Vec3(0.5,0.5,0.5)), material:new CANNON.Material('item')}); b.position.copy(pos); world.addBody(b); const m=new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color:0x00ff00, wireframe:true})); m.position.copy(pos); scene.add(m); items.push({body:b, mesh:m}); }
+function nextWave() { gameState.wave++; startWave(); }
 function startWave() {
-  gameState.req = 10; 
-  gameState.enemiesToSpawn = 0;
-  gameState.puzzle = null;
-  
-  const typeIdx = (gameState.wave - 1) % 5; // Added Boss Waves
-  if (typeIdx === 0) {
-    gameState.missionType = 'normal'; els.missionText.textContent = "通常ミッション";
-  } else if (typeIdx === 1) {
-    gameState.missionType = 'annihilation'; els.missionText.textContent = "殲滅戦 (逃亡許すな)"; gameState.enemiesToSpawn = 10;
-  } else if (typeIdx === 2) {
-    gameState.missionType = 'hunt'; els.missionText.textContent = "討伐戦 (金色の敵を倒せ)"; gameState.req = 1; 
-  } else if (typeIdx === 3) {
-    gameState.missionType = 'boss_composite'; els.missionText.textContent = "巨大ボス討伐"; gameState.req = 1;
-    spawnCompositeBoss();
-  } else if (typeIdx === 4) {
-    gameState.missionType = 'boss_puzzle'; els.missionText.textContent = "四体連携撃破 (順番に倒せ)"; gameState.req = 1;
-    spawnPuzzleBoss();
-  } 
-  
-  if(typeIdx !== 3 && typeIdx !== 4) {
-    // Normal waves setup
-  } else {
-    // Boss wave logic handled above
-  }
-
-  showMsg(`WAVE ${gameState.wave} START`, "#fff");
-  if(gameState.missionType === 'hunt') spawnEnemy('target');
-  if(gameState.missionType === 'annihilation') { for(let i=0; i<3; i++) spawnEnemy(); }
+    gameState.enemiesToSpawn=0; gameState.puzzle=null;
+    const t=(gameState.wave-1)%5;
+    if(t===0){gameState.missionType='normal'; els.missionText.textContent="通常ミッション"; gameState.req=5;}
+    else if(t===1){gameState.missionType='annihilation'; els.missionText.textContent="殲滅戦"; gameState.enemiesToSpawn=8; gameState.req=8;}
+    else if(t===2){gameState.missionType='hunt'; els.missionText.textContent="討伐戦"; gameState.req=1;}
+    else if(t===3){gameState.missionType='boss_composite'; els.missionText.textContent="巨大構造物 解体作業"; gameState.req=1; spawnCompositeBoss();}
+    else if(t===4){gameState.missionType='boss_puzzle'; els.missionText.textContent="連携撃破"; gameState.req=1; spawnPuzzleBoss();}
+    showMsg(`WAVE ${gameState.wave} START`, "#fff");
+    if(gameState.missionType==='hunt') spawnEnemy('target');
+    if(gameState.missionType==='annihilation') { for(let i=0;i<3;i++)spawnEnemy(); }
 }
+function spawnCompositeBoss() { const b=new CANNON.Body({mass:0}); b.position.set(0,20,-40); b.id=-999; const m=new THREE.Group(); scene.add(m); enemies.push({body:b, mesh:m, isCompositeCore:true, partsCount:0}); const add=(x,y,z,sx,sy,sz,hp)=>{const pb=new CANNON.Body({mass:50, collisionFilterGroup:4, collisionFilterMask:1|2|4}); pb.addShape(new CANNON.Box(new CANNON.Vec3(sx/2,sy/2,sz/2))); pb.position.set(x,20+y,-40+z); world.addBody(pb); const pm=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz), new THREE.MeshStandardMaterial({color:CFG.colors.giant})); scene.add(pm); enemies.push({body:pb, mesh:pm, isCompositePart:true, parentId:b.id, hp}); enemies[enemies.length-2].partsCount++;}; add(0,0,0,6,10,4,10); add(-8,5,0,3,8,3,5); add(8,5,0,3,8,3,5); add(0,8,0,4,4,4,5); }
+function spawnPuzzleBoss() { const b=new CANNON.Body({mass:100, shape:new CANNON.Sphere(2), collisionFilterGroup:4, collisionFilterMask:1|2|4}); b.position.set(0,20,-30); world.addBody(b); const m=new THREE.Mesh(new THREE.DodecahedronGeometry(2), new THREE.MeshStandardMaterial({color:0xffff00})); scene.add(m); enemies.push({body:b, mesh:m, isPuzzleCore:true, isInvincible:true, hp:10}); gameState.puzzle={currentStep:0}; spawnPuzzleBossMinions(0,20,-30); }
+function spawnPuzzleBossMinions(cx,cy,cz) { const cols=[0xff0000,0x00ff00,0x0000ff]; cols.forEach((c,i)=>{const a=(i/3)*Math.PI*2; const b=new CANNON.Body({mass:20, shape:new CANNON.Box(new CANNON.Vec3(1,1,1)), collisionFilterGroup:4, collisionFilterMask:1|2|4}); b.position.set(cx+Math.cos(a)*10, cy, cz+Math.sin(a)*10); world.addBody(b); const m=new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color:c})); scene.add(m); enemies.push({body:b, mesh:m, isPuzzleMinion:true, puzzleIndex:i, puzzleColor:c, hp:3}); }); }
+
+function performMetsu(t) { if(!t||t.shrinking)return; if(gameState.playerSp<CFG.kekkai.metsuCost){showMsg("霊力不足","#f00");return;} gameState.playerSp-=CFG.kekkai.metsuCost; spawnText("滅",t.mesh.position,"#f24"); t.shrinking=true; if(t.body){world.removeBody(t.body);t.body=null;} }
+function actionMetsu() { let t=currentTargetKekkai; if(t)performMetsu(t); else showMsg("対象なし","#aaa"); }
+function actionKai() { let t=currentTargetKekkai; if(t)removeKekkai(t); else if(kekkaiList.length>0)removeKekkai(kekkaiList[kekkaiList.length-1]); }
+function actionGlobalMetsu() { if(kekkaiList.length===0)return; if(gameState.playerSp<kekkaiList.length*CFG.kekkai.metsuCost){showMsg("霊力不足","#f00");return;} showMsg("全・滅","#f24"); kekkaiList.forEach(k=>performMetsu(k)); }
+function actionGlobalKai() { if(kekkaiList.length>0){showMsg("全解除","#4f8"); kekkaiList.forEach(k=>removeKekkai(k));} }
+function removeKekkai(k) { if(currentTargetKekkai===k)currentTargetKekkai=null; safeRemoveMesh(k.mesh); if(k.body)world.removeBody(k.body); kekkaiList=kekkaiList.filter(o=>o!==k); }
 
 // --------------------------------------------------
-// ACTIONS
-// --------------------------------------------------
-function performMetsu(t) {
-  if(!t || t.shrinking) return;
-  if(gameState.playerSp < CFG.kekkai.metsuCost) { showMsg("霊力不足", "#f00"); return; }
-  gameState.playerSp -= CFG.kekkai.metsuCost;
-
-  spawnText("滅", t.mesh.position, "#f24"); 
-  t.shrinking = true; 
-  if (t.body) { world.removeBody(t.body); t.body = null; } 
-}
-
-function updateShrinkingKekkai(dt) {
-  [...kekkaiList].forEach(t => {
-    if (!t.shrinking) return;
-    t.mesh.scale.multiplyScalar(0.7); 
-    const kekkaiBox = new THREE.Box3().setFromObject(t.mesh); 
-    enemies.forEach(e => { 
-      const enemyBox = new THREE.Box3().setFromObject(e.mesh);
-      if (kekkaiBox.intersectsBox(enemyBox)) { killEnemy(e); } 
-    }); 
-    if (t.mesh.scale.x <= 0.05) { removeKekkai(t); spawnParticle(t.mesh.position, 30, 0xffaa00); }
-  });
-}
-
-function actionMetsu() { let t = currentTargetKekkai; if (t) { showMsg("滅！", "#f24"); performMetsu(t); } }
-function actionKai() { 
-  let t = currentTargetKekkai;
-  if (t) { showMsg("解", "#4f8"); spawnText("解", t.mesh.position, "#4f8"); removeKekkai(t); } 
-  else if (kekkaiList.length > 0) { t = kekkaiList[kekkaiList.length - 1]; showMsg("解(直近)", "#4f8"); spawnText("解", t.mesh.position, "#4f8"); removeKekkai(t); } 
-}
-
-function actionGlobalMetsu() {
-  if (kekkaiList.length === 0) return;
-  const cost = kekkaiList.length * CFG.kekkai.metsuCost;
-  if(gameState.playerSp < cost) { showMsg("霊力不足", "#f00"); return; }
-  const overlay = document.getElementById('damage-overlay'); overlay.style.background = "white"; overlay.style.opacity = 0.8;
-  setTimeout(() => { overlay.style.opacity = 0; setTimeout(() => { overlay.style.background = "radial-gradient(circle, transparent 60%, red 100%)"; }, 200); }, 100);
-  showMsg("全方囲・滅！！", "#f24");
-  [...kekkaiList].forEach(k => {
-    if(k.mesh.material) { k.mesh.material.color.setHex(0xff0000); k.mesh.material.opacity = 0.8; }
-    if(k.edges && k.edges.material) { k.edges.material.color.setHex(0xffff00); k.edges.material.linewidth = 5; }
-    performMetsu(k);
-  });
-}
-
-function actionGlobalKai() { if (kekkaiList.length === 0) return; showMsg("全解除", "#4f8"); [...kekkaiList].forEach(k => removeKekkai(k)); }
-
-function updateAimMarker() { 
-  if(!playerGroup || !aimMarker) return; 
-  camera.updateMatrixWorld(true);
-  camera.getWorldPosition(_vecPos); camera.getWorldDirection(_vecDir);
-  aimMarker.position.copy(_vecPos).add(_vecDir.clone().multiplyScalar(currentDist));
-  aimMarker.rotation.y = Math.atan2(_vecDir.x, _vecDir.z);
-  aimMarker.visible = true; 
-  
-  let bestCandidate = null;
-  raycaster.set(_vecPos, _vecDir);
-  const intersects = raycaster.intersectObjects(kekkaiList.map(k => k.mesh));
-  if (intersects.length > 0) { bestCandidate = kekkaiList.find(k => k.mesh === intersects[0].object); }
-  if (!bestCandidate) {
-      let minDistanceToRay = 999;
-      kekkaiList.forEach(k => {
-          if(k.shrinking) return;
-          const kPos = k.mesh.position; const vecToK = kPos.clone().sub(_vecPos); const t = vecToK.dot(_vecDir);
-          if (t > 0 && t < CFG.dist.max + 20) {
-              const closestPoint = _vecPos.clone().add(_vecDir.clone().multiplyScalar(t));
-              const dist = kPos.distanceTo(closestPoint);
-              const size = Math.max(k.mesh.scale.x, k.mesh.scale.y, k.mesh.scale.z);
-              if (dist < CFG.aimAssist.baseRadius + (size * 0.5)) {
-                  if (dist < minDistanceToRay) { minDistanceToRay = dist; bestCandidate = k; }
-              }
-          }
-      });
-  }
-
-  if (currentTargetKekkai && currentTargetKekkai !== bestCandidate) {
-     if(currentTargetKekkai.edges && currentTargetKekkai.edges.material) { currentTargetKekkai.edges.material.color.setHex(0xffffff); currentTargetKekkai.edges.material.linewidth = 1; }
-  }
-  currentTargetKekkai = bestCandidate;
-  if (currentTargetKekkai) {
-      if(currentTargetKekkai.edges && currentTargetKekkai.edges.material) { currentTargetKekkai.edges.material.color.setHex(CFG.colors.highlight); currentTargetKekkai.edges.material.linewidth = 3; }
-  }
-}
-
-function startVipMission() { 
-  if (vip) return; 
-  gameState.isVipMode = true; els.vipBox.style.display = "block"; 
-  const b = new CANNON.Body({ mass: 50, shape: new CANNON.Cylinder(0.5, 0.5, 1.8, 8), material: new CANNON.Material('ply'), fixedRotation: true, linearDamping: 0.5, collisionFilterGroup: 2, collisionFilterMask: 1|4 }); 
-  b.position.set(0, 5, -CFG.field.depth / 2 + 30); 
-  world.addBody(b); 
-  const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.8, 16), new THREE.MeshStandardMaterial({ color: CFG.colors.vip }))); 
-  const h = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({ color: 0xffcccc })); h.position.y = 1.0; g.add(h); scene.add(g); 
-  const goalPos = new CANNON.Vec3(0, 5, CFG.field.depth / 2); 
-  vip = { body: b, mesh: g, hp: 100, goal: goalPos }; 
-  const geo = new THREE.ConeGeometry(1, 40, 32, 1, true); const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.3, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }); 
-  vipGoalMesh = new THREE.Mesh(geo, mat); vipGoalMesh.position.set(goalPos.x, 20, goalPos.z); scene.add(vipGoalMesh); 
-}
-
-function updateDynamicBarrier(state, currentHandPos, updatePhysics) {
-  const dx = Math.abs(currentHandPos.x - state.startHandPos.x);
-  const dy = Math.abs(currentHandPos.y - state.startHandPos.y);
-  const dz = Math.abs(currentHandPos.z - state.startHandPos.z);
-  const hMove = Math.sqrt(dx*dx + dz*dz);
-  
-  const sensitivity = CFG.kekkai.sensitivity;
-  const sy = 1.0 + dy * sensitivity;
-  const sx = 1.0 + hMove * sensitivity;
-  const sz = 1.0 + hMove * sensitivity; 
-
-  state.mesh.position.copy(state.startOrigin);
-  state.mesh.scale.set(sx, sy, sz);
-
-  if (updatePhysics && state.body) {
-    world.removeBody(state.body);
-    // 押し出し対応：作成中はプレイヤー(Group 1)と衝突しない(Group 4のみ)
-    const newBody = new CANNON.Body({ mass: 0, material: new CANNON.Material('kek'), collisionFilterGroup: 2, collisionFilterMask: 4 }); 
-    newBody.position.copy(state.mesh.position);
-    newBody.addShape(new CANNON.Box(new CANNON.Vec3(sx/2, sy/2, sz/2)));
-    world.addBody(newBody);
-    state.body = newBody;
-  }
-}
-
-function finalizeBarrier(state, isGhost) {
-  const finalPos = state.mesh.position.clone();
-  const finalScale = state.mesh.scale.clone();
-  safeRemoveMesh(state.mesh);
-  if (state.body) world.removeBody(state.body);
-  createKekkai(finalPos, finalScale, 0, isGhost);
-}
-
-function handleVRInput() {
-  if (!renderer.xr.isPresenting) return;
-  const session = renderer.xr.getSession();
-  if (!session) return;
-
-  const cam = renderer.xr.getCamera();
-  cam.updateMatrixWorld(true);
-  
-  camera.getWorldDirection(_vecDir);
-  _vecDir.y = 0; _vecDir.normalize(); 
-  _vecRight.crossVectors(_vecDir, _vecUp).normalize(); 
-  _vecRight.negate(); 
-
-  for (const src of session.inputSources) {
-    if (!src.gamepad) continue;
-    const gp = src.gamepad;
-    const hand = src.handedness;
-    const idx = (hand === 'left') ? 0 : 1;
-    if (!controllers[idx]) continue;
-    const ctrlPos = controllers[idx].position; 
-
-    // --- 左手 ---
-    if (hand === 'left') {
-      if (gp.axes.length >= 4) { 
-        const stickX = gp.axes[2]; const stickY = gp.axes[3]; 
-        if (Math.abs(stickX) > 0.1 || Math.abs(stickY) > 0.1) {
-          const moveVec = _vecDir.clone().multiplyScalar(-stickY).add(_vecRight.clone().multiplyScalar(-stickX));
-          // Speed boost on kekkai is applied in main loop, here is base calculation
-          moveVec.normalize().multiplyScalar(CFG.player.speed); // Base speed
-          playerBody.velocity.x = moveVec.x; playerBody.velocity.z = moveVec.z;
-        } else { playerBody.velocity.x = 0; playerBody.velocity.z = 0; }
-      }
-      if (gp.buttons[0]?.pressed) { if (!vrState.left.triggerHeld) { actionKai(); vrState.left.triggerHeld = true; } } else { vrState.left.triggerHeld = false; }
-      if (gp.buttons[4]?.pressed) { if (!vrState.left.xHeld) { actionGlobalKai(); vrState.left.xHeld = true; } } else { vrState.left.xHeld = false; }
-      if (gp.buttons[5]?.pressed) { if (!vrState.left.yHeld) { actionGlobalMetsu(); vrState.left.yHeld = true; } } else { vrState.left.yHeld = false; }
-
-      const grip = gp.buttons[1]?.pressed;
-      if (grip) {
-        if (!vrState.left.drawing) {
-           vrState.left.drawing = true; vrState.left.startHandPos.copy(ctrlPos);
-           vrState.left.startOrigin.copy(aimMarker.position).sub(new THREE.Vector3(0, 0.5, 0));
-           const g = new THREE.BoxGeometry(1, 1, 1);
-           const m = new THREE.MeshPhongMaterial({ color: CFG.colors.drawPhys, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
-           vrState.left.mesh = new THREE.Mesh(g, m);
-           vrState.left.mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })));
-           vrState.left.mesh.position.copy(vrState.left.startOrigin);
-           scene.add(vrState.left.mesh);
-           // Creating temporary body that IGNORES player for 10:1 feel (no pushback)
-           vrState.left.body = new CANNON.Body({ mass: 0, material: new CANNON.Material('kek'), collisionFilterGroup: 2, collisionFilterMask: 4 }); 
-           vrState.left.body.addShape(new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5)));
-           vrState.left.body.position.copy(vrState.left.startOrigin); world.addBody(vrState.left.body);
-        } else { if (vrState.left.mesh && vrState.left.body) updateDynamicBarrier(vrState.left, ctrlPos, true); }
-      } else {
-        if (vrState.left.drawing) {
-          if (vrState.left.mesh && vrState.left.body) finalizeBarrier(vrState.left, false);
-          vrState.left.drawing = false; vrState.left.mesh = null; vrState.left.body = null;
-        }
-      }
-    }
-
-    // --- 右手 ---
-    if (hand === 'right') {
-      const turnVal = gp.axes[2];
-      if (Math.abs(turnVal) > 0.2) { camAngle.yaw -= turnVal * 0.04; }
-      if (gp.buttons[4]?.pressed && Math.abs(playerBody.velocity.y) < 1) playerBody.velocity.y = CFG.player.jump;
-      
-      // Distance Control: Button B (5) Hold + Move
-      if (gp.buttons[5]?.pressed) { 
-        if (!vrState.right.bBtnHeld) { 
-             vrState.right.bBtnHeld = true; 
-             vrState.right.lastDistZ = ctrlPos.z; // Track local/world Z
-        }
-        // Analog adjustment: Pull back (positive z relative to camera?) or just Delta Z
-        // Using controller Z movement
-        const deltaZ = (vrState.right.lastDistZ - ctrlPos.z) * 20.0; // High sensitivity
-        currentDist = Math.max(CFG.dist.min, Math.min(CFG.dist.max, currentDist + deltaZ));
-        vrState.right.lastDistZ = ctrlPos.z;
-        // showMsg(`距離: ${currentDist.toFixed(1)}m`, "#fff"); // Optional spam
-      } else { 
-        vrState.right.bBtnHeld = false; 
-      }
-
-      if (gp.buttons[0]?.pressed) { if (!vrState.right.triggerHeld) { actionMetsu(); vrState.right.triggerHeld = true; } } else { vrState.right.triggerHeld = false; }
-      
-      const grip = gp.buttons[1]?.pressed;
-      if (grip) {
-        if (!vrState.right.drawing) {
-           vrState.right.drawing = true; vrState.right.startHandPos.copy(ctrlPos);
-           vrState.right.startOrigin.copy(aimMarker.position).sub(new THREE.Vector3(0, 0.5, 0));
-           const g = new THREE.BoxGeometry(1, 1, 1);
-           const m = new THREE.MeshPhongMaterial({ color: CFG.colors.drawGhost, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
-           vrState.right.mesh = new THREE.Mesh(g, m);
-           vrState.right.mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })));
-           vrState.right.mesh.position.copy(vrState.right.startOrigin); 
-           scene.add(vrState.right.mesh);
-        } else { if (vrState.right.mesh) updateDynamicBarrier(vrState.right, ctrlPos, false); }
-      } else {
-        if (vrState.right.drawing) {
-          if (vrState.right.mesh) finalizeBarrier(vrState.right, true);
-          vrState.right.drawing = false; vrState.right.mesh = null;
-        }
-      }
-    }
-  }
-
-  playerGroup.position.copy(playerBody.position);
-  playerGroup.rotation.y = camAngle.yaw;
-}
-
-// --- Mobile/PC Inputs ---
-function createActiveMobile() { 
-  const p = aimMarker.position.clone().sub(new THREE.Vector3(0, 0.5, 0)); const r = camAngle.yaw; 
-  // Mobile draw also ignores player collision
-  const b = new CANNON.Body({ mass: 0, material: new CANNON.Material('kek'), collisionFilterGroup: 2, collisionFilterMask: 4 }); 
-  b.position.copy(p); b.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), r); world.addBody(b); 
-  const g = new THREE.BoxGeometry(1, 1, 1), m = new THREE.MeshPhongMaterial({ color: CFG.colors.drawPhys, transparent: true, opacity: 0.5, side: THREE.DoubleSide }); 
-  const mesh = new THREE.Mesh(g, m); const edges=new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })); mesh.add(edges); mesh.position.copy(p); mesh.rotation.y = r; 
-  scene.add(mesh); 
-  return { body: b, mesh: mesh, startP: p, startR: r, currentS: { x: 1, y: 1, z: 1 } }; 
-}
-function updateActiveMobile(k, dx, dy) { const sx = 1.0 + Math.max(0, dx * 10), sy = 1.0 + Math.max(0, dy * 10), sz = sx; k.currentS = { x: sx, y: sy, z: sz }; k.mesh.scale.set(sx, sy, sz); const newY = k.startP.y; k.mesh.position.y = newY; k.body.position.y = newY; k.body.shapes = []; k.body.addShape(new CANNON.Box(new CANNON.Vec3(sx / 2, sy / 2, sz / 2))); }
-function finalizeMobile(k) { k.mesh.material.color.setHex(CFG.colors.kekkai); k.mesh.material.opacity = 0.5; const edges=k.mesh.children[0]; 
-  world.removeBody(k.body);
-  // Finalize with full collision
-  createKekkai(k.mesh.position, k.mesh.scale, k.mesh.rotation.y, false);
-  safeRemoveMesh(k.mesh);
-}
-function setupMobileInputs(){
-  els.stick.addEventListener('touchstart',e=>{e.preventDefault();if(stickId!==null)return;const t=e.changedTouches[0];stickId=t.identifier;const r=els.stick.getBoundingClientRect();stickStart={x:r.left+r.width/2,y:r.top+r.height/2};tapTime=Date.now();tapPos={x:t.clientX,y:t.clientY};moveStick(t.clientX,t.clientY);},{passive:false});
-  els.stick.addEventListener('touchmove',e=>{e.preventDefault();for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===stickId)moveStick(e.changedTouches[i].clientX,e.changedTouches[i].clientY);},{passive:false});
-  const endStick=e=>{for(let i=0;i<e.changedTouches.length;i++){const t=e.changedTouches[i];if(t.identifier===stickId){if(Date.now()-tapTime<200&&Math.hypot(t.clientX-tapPos.x,t.clientY-tapPos.y)<15){if(playerBody&&Math.abs(playerBody.velocity.y)<1)playerBody.velocity.y=CFG.player.jump;}stickId=null;input.x=0;input.y=0;els.knob.style.transform='translate(-50%,-50%)';}}};
-  els.stick.addEventListener('touchend',endStick);els.stick.addEventListener('touchcancel',endStick);
-  function moveStick(cx,cy){let dx=cx-stickStart.x,dy=cy-stickStart.y;const d=Math.hypot(dx,dy),max=(els.stick.offsetWidth/2)*0.8;if(d>max){dx*=max/d;dy*=max/d;}input.x=dx/max;input.y=dy/max;els.knob.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;}
-  renderer.domElement.addEventListener('touchstart',e=>{e.preventDefault();for(let i=0;i<e.changedTouches.length;i++){if(lookId===null&&e.changedTouches[i].target===renderer.domElement){lookId=e.changedTouches[i].identifier;lastLook={x:e.changedTouches[i].clientX,y:e.changedTouches[i].clientY};}}},{passive:false});
-  renderer.domElement.addEventListener('touchmove',e=>{e.preventDefault();if(lookId===null)return;for(let i=0;i<e.changedTouches.length;i++){if(e.changedTouches[i].identifier===lookId){const t=e.changedTouches[i];camAngle.yaw-=(t.clientX-lastLook.x)*0.004;camAngle.pitch-=(t.clientY-lastLook.y)*0.004;camAngle.pitch=Math.max(-1.5,Math.min(1.5,camAngle.pitch));lastLook={x:t.clientX,y:t.clientY};}}},{passive:false});
-  renderer.domElement.addEventListener('touchend',e=>{for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===lookId)lookId=null;});
-  els.btnJump.addEventListener('touchstart',e=>{e.preventDefault();if(playerBody&&Math.abs(playerBody.velocity.y)<1)playerBody.velocity.y=CFG.player.jump;});
-  els.btnDist.addEventListener('touchstart',e=>{e.preventDefault();currentDist=(currentDist===CFG.dist.default)?CFG.dist.max:CFG.dist.default;els.distLabel.textContent=(currentDist===CFG.dist.default)?"近":"遠";showMsg(`射程: ${els.distLabel.textContent}`,"#fff");});
-  els.btnAct.addEventListener('touchstart',e=>{e.preventDefault();if(actId!==null)return;const t=e.changedTouches[0];actId=t.identifier;actStartPos={x:t.clientX,y:t.clientY};});
-  els.btnAct.addEventListener('touchend',e=>{e.preventDefault();for(let i=0;i<e.changedTouches.length;i++){if(e.changedTouches[i].identifier===actId){const t=e.changedTouches[i];if(Math.hypot(t.clientX-actStartPos.x,t.clientY-actStartPos.y)>20)actionKai();else actionMetsu();actId=null;}}});
-  els.modeBtn.addEventListener('touchstart',e=>{e.preventDefault(); e.stopPropagation(); isPhysMode = !isPhysMode; els.modeBtn.textContent = isPhysMode ? "モード: 顕現" : "モード: 幽体"; els.modeBtn.className = isPhysMode ? "phys" : "ghost"; els.btnDraw.style.background = isPhysMode ? "linear-gradient(135deg, #FFD700, #FF8C00)" : "linear-gradient(135deg, #03a9f4, #0288d1)"; els.btnDraw.innerHTML = isPhysMode ? "顕<br><span style='font-size:10px'>Hold</span>" : "結<br><span style='font-size:10px'>Hold</span>"; showMsg(isPhysMode ? "物理顕現モード" : "幽体結界モード", "#fff");});
-  els.btnDraw.addEventListener('touchstart',e=>{ e.preventDefault(); if(drawId!==null)return; const t=e.changedTouches[0]; drawId=t.identifier; els.btnDraw.classList.add('drawing'); if(isPhysMode) { activePhysKekkai = createActiveMobile(); activePhysKekkai.startX=t.clientX; activePhysKekkai.startY=t.clientY; } else { drawState.active=true; drawState.startX=t.clientX; drawState.startY=t.clientY; const gg=new THREE.BoxGeometry(1,1,1),gm=new THREE.MeshPhongMaterial({color:CFG.colors.drawGhost,transparent:true,opacity:0.5, side: THREE.DoubleSide}); drawState.ghost=new THREE.Mesh(gg,gm); drawState.ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(gg), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }))); 
-  drawState.ghost.position.copy(aimMarker.position).sub(new THREE.Vector3(0, 0.5, 0));
-  drawState.ghost.rotation.y=camAngle.yaw; scene.add(drawState.ghost); } });
-  els.btnDraw.addEventListener('touchmove',e=>{ e.preventDefault(); if(drawId===null)return; for(let i=0;i<e.changedTouches.length;i++){if(e.changedTouches[i].identifier===drawId){ const t=e.changedTouches[i]; if(isPhysMode && activePhysKekkai) { const dx=Math.abs(t.clientX-activePhysKekkai.startX)*0.06, dy=(activePhysKekkai.startY-t.clientY)*0.06; updateActiveMobile(activePhysKekkai, dx, dy); } else if(drawState.active && drawState.ghost) { const dx=Math.abs(t.clientX-drawState.startX)*0.06, dy=(drawState.startY-t.clientY)*0.06; const sxz=1.0+Math.max(0,dx), sy=1.0+Math.max(0,dy); drawState.ghost.scale.set(sxz,sy,sxz); } }} });
-  els.btnDraw.addEventListener('touchend',e=>{ e.preventDefault(); for(let i=0;i<e.changedTouches.length;i++){if(e.changedTouches[i].identifier===drawId){ if(isPhysMode && activePhysKekkai) { finalizeMobile(activePhysKekkai); activePhysKekkai=null; } else if(drawState.ghost) { createKekkai(drawState.ghost.position,drawState.ghost.scale,drawState.ghost.rotation.y, true); safeRemoveMesh(drawState.ghost); drawState.ghost=null; drawState.active=false; } drawId=null; els.btnDraw.classList.remove('drawing'); }} });
-}
-
-// --------------------------------------------------
-// 5. ENVIRONMENT SETUP
+// ENVIRONMENT (Restored)
 // --------------------------------------------------
 function setupEnvironment(mat){
   const sun=new THREE.DirectionalLight(0xffffee,1.2); sun.position.set(-50,100,50); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.camera.left=-100; sun.shadow.camera.right=100; sun.shadow.camera.top=100; sun.shadow.camera.bottom=-100; scene.add(sun); scene.add(new THREE.AmbientLight(0x555566,0.6));
@@ -941,150 +342,253 @@ function setupEnvironment(mat){
   for(let i=0; i<5; i++) createTree(-FW/2+3, -FD/2 + 10 + i*20); for(let i=0; i<5; i++) createTree(FW/2-3, -FD/2 + 10 + i*20);
 }
 
-// --------------------------------------------------
-// 6. VR INIT & MAIN LOOP
-// --------------------------------------------------
-function setupVRControllers() { const modelFactory = new XRControllerModelFactory(); for (let i = 0; i < 2; i++) { const controller = renderer.xr.getController(i); playerGroup.add(controller); controllers.push(controller); const grip = renderer.xr.getControllerGrip(i); grip.add(modelFactory.createControllerModel(grip)); playerGroup.add(grip); controllerGrips.push(grip); } }
-function setupVRHud() { const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 128; vrHudCtx = canvas.getContext('2d'); const tex = new THREE.CanvasTexture(canvas); vrHudMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.25), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.9, depthTest: false })); vrHudMesh.position.set(0, 0.3, -1); vrHudMesh.renderOrder = 9999; camera.add(vrHudMesh); }
+function setupMobileInputs() {
+  els.stick.addEventListener('touchstart',e=>{e.preventDefault(); if(stickId)return; const t=e.changedTouches[0]; stickId=t.identifier; const r=els.stick.getBoundingClientRect(); stickStart={x:r.left+r.width/2, y:r.top+r.height/2}; tapTime=Date.now(); tapPos={x:t.clientX,y:t.clientY}; handleStick(t.clientX,t.clientY); },{passive:false});
+  els.stick.addEventListener('touchmove',e=>{e.preventDefault(); for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===stickId)handleStick(e.changedTouches[i].clientX,e.changedTouches[i].clientY); },{passive:false});
+  els.stick.addEventListener('touchend',e=>{for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===stickId){
+    if(Date.now()-tapTime<200 && Math.hypot(e.changedTouches[i].clientX-tapPos.x, e.changedTouches[i].clientY-tapPos.y)<15) if(Math.abs(playerBody.velocity.y)<1) playerBody.velocity.y=CFG.player.jump;
+    stickId=null; input.x=0; input.y=0; els.knob.style.transform='translate(-50%,-50%)';
+  }});
+  function handleStick(cx,cy) { let dx=cx-stickStart.x, dy=cy-stickStart.y; const d=Math.hypot(dx,dy), max=(els.stick.offsetWidth/2)*0.8; if(d>max){dx*=max/d;dy*=max/d;} input.x=dx/max; input.y=dy/max; els.knob.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; }
+  
+  renderer.domElement.addEventListener('touchstart',e=>{e.preventDefault(); for(let i=0;i<e.changedTouches.length;i++)if(!lookId && e.changedTouches[i].target===renderer.domElement){lookId=e.changedTouches[i].identifier; lastLook={x:e.changedTouches[i].clientX, y:e.changedTouches[i].clientY};}},{passive:false});
+  renderer.domElement.addEventListener('touchmove',e=>{e.preventDefault(); if(!lookId)return; for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===lookId){const t=e.changedTouches[i]; camAngle.yaw-=(t.clientX-lastLook.x)*0.004; camAngle.pitch-=(t.clientY-lastLook.y)*0.004; camAngle.pitch=Math.max(-1.5,Math.min(1.5,camAngle.pitch)); lastLook={x:t.clientX,y:t.clientY};}},{passive:false});
+  renderer.domElement.addEventListener('touchend',e=>{for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===lookId)lookId=null;});
+
+  els.btnJump.addEventListener('touchstart',e=>{e.preventDefault(); if(Math.abs(playerBody.velocity.y)<1)playerBody.velocity.y=CFG.player.jump;});
+  // Mobile Distance Toggle: 6 -> 15 -> 35
+  els.btnDist.addEventListener('touchstart',e=>{e.preventDefault(); 
+      if(currentDist < 10) currentDist = 15; else if(currentDist < 20) currentDist = 35; else currentDist = 6;
+      els.distLabel.textContent = currentDist===6?"近":(currentDist===15?"中":"遠");
+      showMsg(`射程: ${currentDist}m`, "#fff");
+  });
+  
+  els.btnAct.addEventListener('touchstart',e=>{e.preventDefault(); if(actId)return; actId=e.changedTouches[0].identifier; actStartPos={x:e.changedTouches[0].clientX,y:e.changedTouches[0].clientY};});
+  els.btnAct.addEventListener('touchend',e=>{e.preventDefault(); for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===actId){ 
+      if(Math.hypot(e.changedTouches[i].clientX-actStartPos.x, e.changedTouches[i].clientY-actStartPos.y)>20) actionKai(); 
+      else actionMetsu(); 
+      actId=null; 
+  }});
+  
+  els.modeBtn.addEventListener('touchstart',e=>{e.preventDefault(); e.stopPropagation(); isPhysMode=!isPhysMode; els.modeBtn.textContent=isPhysMode?"モード: 顕現":"モード: 幽体"; els.modeBtn.className=isPhysMode?"phys":"ghost"; els.btnDraw.style.background=isPhysMode?"linear-gradient(135deg,#FFD700,#FF8C00)":"linear-gradient(135deg,#03a9f4,#0288d1)"; els.btnDraw.innerHTML=isPhysMode?"顕<br><span style='font-size:10px'>Hold</span>":"結<br><span style='font-size:10px'>Hold</span>";});
+
+  els.btnDraw.addEventListener('touchstart',e=>{e.preventDefault(); if(drawId)return; const t=e.changedTouches[0]; drawId=t.identifier; els.btnDraw.classList.add('drawing');
+    if(isPhysMode){ activePhysKekkai=createActiveMobile(); activePhysKekkai.startX=t.clientX; activePhysKekkai.startY=t.clientY; }
+    else { drawState.active=true; drawState.startX=t.clientX; drawState.startY=t.clientY; const g=new THREE.BoxGeometry(1,1,1), m=new THREE.MeshBasicMaterial({color:CFG.colors.drawGhost, transparent:true, opacity:0.3}); drawState.ghost=new THREE.Mesh(g,m); drawState.ghost.position.copy(aimMarker.position).sub(new THREE.Vector3(0,0.5,0)); drawState.ghost.rotation.y=camAngle.yaw; scene.add(drawState.ghost); }
+  });
+  els.btnDraw.addEventListener('touchmove',e=>{e.preventDefault(); if(!drawId)return; for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===drawId){
+    const t=e.changedTouches[i];
+    if(activePhysKekkai){ const dx=Math.abs(t.clientX-activePhysKekkai.startX)*0.06, dy=(activePhysKekkai.startY-t.clientY)*0.06; updateActiveMobile(activePhysKekkai,dx,dy); }
+    else if(drawState.ghost){ const dx=Math.abs(t.clientX-drawState.startX)*0.06 * 1.5, dy=(drawState.startY-t.clientY)*0.06 * 1.5; const s=1+Math.max(0,dx), sy=1+Math.max(0,dy); drawState.ghost.scale.set(s,sy,s); }
+  }});
+  els.btnDraw.addEventListener('touchend',e=>{e.preventDefault(); for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===drawId){
+    if(activePhysKekkai){ world.removeBody(activePhysKekkai.body); createKekkai(activePhysKekkai.mesh.position, activePhysKekkai.mesh.scale, activePhysKekkai.mesh.rotation.y, false); safeRemoveMesh(activePhysKekkai.mesh); activePhysKekkai=null; }
+    else if(drawState.ghost){ createKekkai(drawState.ghost.position, drawState.ghost.scale, drawState.ghost.rotation.y, true); safeRemoveMesh(drawState.ghost); drawState.ghost=null; drawState.active=false; }
+    drawId=null; els.btnDraw.classList.remove('drawing');
+  }});
+}
+function createActiveMobile() { const p=aimMarker.position.clone().sub(new THREE.Vector3(0,0.5,0)), r=camAngle.yaw; const b=new CANNON.Body({mass:0, collisionFilterGroup:2, collisionFilterMask:1|2|4}); b.position.copy(p); b.quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0),r); world.addBody(b); const m=new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshPhongMaterial({color:CFG.colors.drawPhys, transparent:true, opacity:0.5})); m.position.copy(p); m.rotation.y=r; scene.add(m); return {body:b, mesh:m, startP:p, startR:r}; }
+function updateActiveMobile(k,dx,dy) { const sx=1+Math.max(0,dx*10), sy=1+Math.max(0,dy*10); k.mesh.scale.set(sx,sy,sx); k.mesh.position.y=k.startP.y; world.removeBody(k.body); k.body=new CANNON.Body({mass:0, collisionFilterGroup:2, collisionFilterMask:1|2|4}); k.body.position.copy(k.mesh.position); k.body.quaternion.copy(k.mesh.quaternion); k.body.addShape(new CANNON.Box(new CANNON.Vec3(sx/2,sy/2,sx/2))); world.addBody(k.body); }
+
+function handleVRInput() {
+  const session=renderer.xr.getSession(); if(!session)return;
+  const cam=renderer.xr.getCamera(); cam.updateMatrixWorld(true);
+  camera.getWorldDirection(_vecDir); _vecDir.y=0; _vecDir.normalize(); _vecRight.crossVectors(_vecDir,_vecUp).normalize().negate();
+  for(const src of session.inputSources){
+    if(!src.gamepad)continue; const gp=src.gamepad, idx=(src.handedness==='left')?0:1; if(!controllers[idx])continue; const ctrl=controllers[idx];
+    if(src.handedness==='left'){
+      const stickX=gp.axes[2], stickY=gp.axes[3];
+      if(Math.abs(stickX)>0.1 || Math.abs(stickY)>0.1) { const v=_vecDir.clone().multiplyScalar(-stickY).add(_vecRight.clone().multiplyScalar(-stickX)); playerBody.velocity.x=v.x*CFG.player.speed; playerBody.velocity.z=v.z*CFG.player.speed; } else { playerBody.velocity.x=0; playerBody.velocity.z=0; }
+      if(gp.buttons[0].pressed){ if(!vrState.left.triggerHeld){actionKai(); vrState.left.triggerHeld=true;} } else vrState.left.triggerHeld=false;
+      const grip=gp.buttons[1].pressed;
+      if(grip){ if(!vrState.left.drawing){ vrState.left.drawing=true; vrState.left.startHandPos.copy(ctrl.position); vrState.left.startOrigin.copy(aimMarker.position); vrState.left.startDir.copy(_vecDir); vrState.left.mesh=new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color:0xffff00, transparent:true, opacity:0.5})); scene.add(vrState.left.mesh); vrState.left.body=new CANNON.Body({mass:0, collisionFilterGroup:2, collisionFilterMask:1|2|4}); vrState.left.body.addShape(new CANNON.Box(new CANNON.Vec3(0.5,0.5,0.5))); vrState.left.body.position.copy(vrState.left.startOrigin); world.addBody(vrState.left.body); } else updateDynamicBarrier(vrState.left, ctrl.position, true); }
+      else if(vrState.left.drawing){ createKekkai(vrState.left.mesh.position, vrState.left.mesh.scale, 0, false); safeRemoveMesh(vrState.left.mesh); world.removeBody(vrState.left.body); vrState.left.drawing=false; }
+    } else {
+      if(Math.abs(gp.axes[2])>0.2) camAngle.yaw-=gp.axes[2]*0.04;
+      if(gp.buttons[4].pressed && Math.abs(playerBody.velocity.y)<0.5) playerBody.velocity.y=CFG.player.jump;
+      if(gp.buttons[5].pressed){ if(!vrState.right.bBtnHeld){vrState.right.bBtnHeld=true; vrState.right.lastDistZ=ctrl.position.z;} const dz=(vrState.right.lastDistZ-ctrl.position.z)*20; currentDist=Math.max(0,Math.min(40,currentDist+dz)); vrState.right.lastDistZ=ctrl.position.z; } else vrState.right.bBtnHeld=false;
+      if(gp.buttons[0].pressed){ if(!vrState.right.triggerHeld){actionMetsu(); vrState.right.triggerHeld=true;} } else vrState.right.triggerHeld=false;
+      const grip=gp.buttons[1].pressed;
+      if(grip){ if(!vrState.right.drawing){ vrState.right.drawing=true; vrState.right.startHandPos.copy(ctrl.position); vrState.right.startOrigin.copy(aimMarker.position); vrState.right.startDir.copy(_vecDir); vrState.right.mesh=new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color:0x00ffff, transparent:true, opacity:0.3})); scene.add(vrState.right.mesh); } else updateDynamicBarrier(vrState.right, ctrl.position, false); }
+      else if(vrState.right.drawing){ createKekkai(vrState.right.mesh.position, vrState.right.mesh.scale, 0, true); safeRemoveMesh(vrState.right.mesh); vrState.right.drawing=false; }
+    }
+  }
+  playerGroup.position.copy(playerBody.position); playerGroup.rotation.y=camAngle.yaw;
+}
+
+function updateDynamicBarrier(state, currentHandPos, updatePhysics) {
+  const isGhost = !updatePhysics;
+  const sens = CFG.kekkai.sensitivity * (isGhost ? 1.5 : 1.0); // 150% sensitivity for Ghost
+  const dx=Math.abs(currentHandPos.x-state.startHandPos.x), dy=Math.abs(currentHandPos.y-state.startHandPos.y), dz=Math.abs(currentHandPos.z-state.startHandPos.z);
+  const hMove=Math.sqrt(dx*dx+dz*dz);
+  const sx=1.0+hMove*sens, sy=1.0+dy*sens, sz=1.0+hMove*sens;
+  const shiftAmount = (sz-1.0)*0.45; 
+  const shiftVec = state.startDir.clone().multiplyScalar(shiftAmount);
+  state.mesh.position.copy(state.startOrigin).add(shiftVec);
+  state.mesh.scale.set(sx,sy,sz);
+  if(updatePhysics && state.body){
+    world.removeBody(state.body);
+    // Phys Barrier has collision mask 1|2|4 immediately for Elevator
+    const nb=new CANNON.Body({mass:0, collisionFilterGroup:2, collisionFilterMask:1|2|4});
+    nb.position.copy(state.mesh.position); nb.addShape(new CANNON.Box(new CANNON.Vec3(sx/2,sy/2,sz/2)));
+    world.addBody(nb); state.body=nb;
+  }
+}
+
+function setupVRControllers() {
+  const mf=new XRControllerModelFactory();
+  for(let i=0;i<2;i++){
+    const c=renderer.xr.getController(i); playerGroup.add(c); controllers.push(c);
+    const g=renderer.xr.getControllerGrip(i); g.add(mf.createControllerModel(g)); playerGroup.add(g); controllerGrips.push(g);
+  }
+}
+
+function setupVRHud() {
+  const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 128;
+  vrHudCtx = canvas.getContext('2d');
+  const tex = new THREE.CanvasTexture(canvas);
+  vrHudMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.25), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false }));
+  vrHudMesh.position.set(0, 0.3, -1); camera.add(vrHudMesh);
+}
+
+function updateAimMarker() {
+  if(!playerGroup||!aimMarker)return;
+  camera.updateMatrixWorld(true);
+  camera.getWorldPosition(_vecPos); camera.getWorldDirection(_vecDir);
+  aimMarker.position.copy(_vecPos).add(_vecDir.clone().multiplyScalar(currentDist));
+  aimMarker.rotation.y = Math.atan2(_vecDir.x, _vecDir.z);
+  aimMarker.visible = true;
+  
+  let bestCandidate = null;
+  raycaster.set(_vecPos, _vecDir);
+  const intersects = raycaster.intersectObjects(kekkaiList.map(k => k.mesh));
+  if (intersects.length > 0) { bestCandidate = kekkaiList.find(k => k.mesh === intersects[0].object); }
+  
+  if(!bestCandidate) {
+      let minD = 999;
+      kekkaiList.forEach(k => {
+          const kPos = k.mesh.position; const vecToK = kPos.clone().sub(_vecPos); const t = vecToK.dot(_vecDir);
+          if (t > 0 && t < CFG.dist.max + 20) {
+              const closestPoint = _vecPos.clone().add(_vecDir.clone().multiplyScalar(t));
+              const dist = kPos.distanceTo(closestPoint);
+              const size = Math.max(k.mesh.scale.x, k.mesh.scale.y, k.mesh.scale.z);
+              if (dist < CFG.aimAssist.baseRadius + (size * 0.5)) { if(dist<minD){minD=dist; bestCandidate=k;} }
+          }
+      });
+  }
+
+  if (currentTargetKekkai && currentTargetKekkai !== bestCandidate) { if(currentTargetKekkai.edges && currentTargetKekkai.edges.material) { currentTargetKekkai.edges.material.color.setHex(0xffffff); currentTargetKekkai.edges.material.linewidth = 1; } }
+  currentTargetKekkai = bestCandidate;
+  if (currentTargetKekkai) { if(currentTargetKekkai.edges && currentTargetKekkai.edges.material) { currentTargetKekkai.edges.material.color.setHex(CFG.colors.highlight); currentTargetKekkai.edges.material.linewidth = 3; } }
+}
 
 function loop(t) {
-  if (renderer.xr.isPresenting) handleVRInput(); 
+  const dt=Math.min((t-lastT)/1000, 0.1); lastT=t;
+  world.step(1/60, dt, 3);
+  
+  gameState.playerSp = Math.min(100, gameState.playerSp + CFG.kekkai.spRegen*dt);
+  updateHUD();
 
-  const dt = Math.min((t - lastT) / 1000, 0.1); lastT = t; 
-  
-  updateSP(dt);
-  
-  // Speed Up on Kekkai Logic (Raycast Down)
-  let speedMult = 1.0;
-  raycaster.set(playerBody.position, new THREE.Vector3(0, -1, 0));
+  raycaster.set(playerBody.position, new THREE.Vector3(0,-1,0));
   const hits = raycaster.intersectObjects(kekkaiList.map(k=>k.mesh));
-  if (hits.length > 0 && hits[0].distance < 1.5) { speedMult = 1.8; }
-  
-  // Apply velocity damping and manual input
-  // (VR input applies velocity directly, so we scale it there if needed, but for damping:)
-  // For simplicity, we just modify the resulting velocity if needed, but since we set velocity directly in inputs,
-  // we should apply speedMult there. However, let's apply it as a post-process scale for simplicity
-  if (speedMult > 1.0) {
-      playerBody.velocity.x *= 1.05; // Gentle acceleration
-      playerBody.velocity.z *= 1.05;
-  }
-  
-  world.step(1 / 60, dt, 3);
+  const speedMult = (hits.length>0 && hits[0].distance<1.5) ? 1.8 : 1.0;
 
-  updateShrinkingKekkai(dt);
+  if(renderer.xr.isPresenting) handleVRInput();
+  else {
+    const fwd=new THREE.Vector3(input.x,0,input.y).applyAxisAngle(new THREE.Vector3(0,1,0), camAngle.yaw);
+    playerBody.velocity.x=fwd.x*CFG.player.speed*speedMult; playerBody.velocity.z=fwd.z*CFG.player.speed*speedMult;
+    playerGroup.position.copy(playerBody.position).add(new THREE.Vector3(0,CFG.player.height,0));
+    playerGroup.rotation.y=camAngle.yaw; camera.rotation.x=camAngle.pitch;
+  }
+  
+  updateAimMarker();
 
-  if (!renderer.xr.isPresenting) { 
-    const yaw = camAngle.yaw;
-    const fwd = new THREE.Vector3(input.x, 0, input.y).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw); 
-    playerBody.velocity.x = fwd.x * CFG.player.speed * speedMult; 
-    playerBody.velocity.z = fwd.z * CFG.player.speed * speedMult; 
-    playerGroup.position.copy(playerBody.position).add(new THREE.Vector3(0, CFG.player.height, 0)); 
-    playerGroup.rotation.y = yaw; camera.rotation.x = camAngle.pitch; 
-  }
-   
-  updateAimMarker(); if (t > gameState.nextSpawn) { spawnEnemy(); gameState.nextSpawn = t + 3000 - gameState.wave * 100; }
-  items.forEach(it => { it.mesh.position.copy(it.body.position); it.mesh.rotation.y += 0.05; if (playerBody.position.distanceTo(it.body.position) < 2.0) { healPlayer(20); scene.remove(it.mesh); world.removeBody(it.body); items = items.filter(i => i !== it); } });
-  
-  if (vip) { 
-    vip.mesh.position.copy(vip.body.position); const tg = vip.goal.vsub(vip.body.position); if(vipGoalMesh) vipGoalMesh.rotation.y += 0.02; 
-    if (tg.length() < 6.0) { 
-        showMsg("護衛成功!", "#0f0"); world.removeBody(vip.body); scene.remove(vip.mesh); vip = null; els.vipBox.style.display = "none"; if(vipGoalMesh) { scene.remove(vipGoalMesh); vipGoalMesh = null; } 
-        gameState.req = 0; 
-        [...enemies].forEach(en => removeEnemy(en));
-        setTimeout(nextWave, 2000);
-    } else { 
-        tg.normalize(); vip.body.velocity.x = tg.x * 7; vip.body.velocity.z = tg.z * 7; els.vipHpBar.style.width = vip.hp + "%"; 
-        if (vip.hp <= 0) { showMsg("護衛失敗...", "#f00"); world.removeBody(vip.body); scene.remove(vip.mesh); vip = null; els.vipBox.style.display = "none"; if(vipGoalMesh) { scene.remove(vipGoalMesh); vipGoalMesh = null; }} 
-    } 
-  }
-  
-  const fW = CFG.field.width, fD = CFG.field.depth; 
-  enemies.forEach(e => { 
-    e.mesh.position.copy(e.body.position); e.mesh.quaternion.copy(e.body.quaternion); 
-    if (e.body.position.y < -10) killEnemy(e); 
-    const isOut = Math.abs(e.body.position.x) > fW / 2 + 2 || Math.abs(e.body.position.z) > fD / 2 + 2; 
-    if (isOut) { 
-        if(gameState.missionType === 'annihilation') { showMsg("敵逃亡(撃破扱)", "#aaa"); killEnemy(e, true); return; }
-        if (!e.body.outsideTimer) e.body.outsideTimer = 0; e.body.outsideTimer += dt; if (e.body.outsideTimer > 20.0) { showMsg("敵逃亡!", "#aaa"); removeEnemy(e); return; } 
-        const cu = new CANNON.Vec3(0, 25, 0), dr = cu.vsub(e.body.position); dr.normalize(); e.body.applyForce(dr.scale(e.isGiant ? 200 : 40), e.body.position); 
-    } else { 
-        e.body.outsideTimer = 0; 
-        if(e.isCompositeCore) return; // Core doesn't move or AI
-        
-        const target = (vip && vip.hp > 0) ? vip.body.position : playerBody.position; 
-        const d = target.vsub(e.body.position); d.normalize(); 
-        
-        if (e.type === 'floater_high') {
-           const hoverH = 12.0 + Math.sin(t * 0.002 + e.body.id) * 2; e.body.force.y += 30 * e.body.mass; 
-           const hDiff = hoverH - e.body.position.y; e.body.applyForce(new CANNON.Vec3(d.x * 5, hDiff * 5, d.z * 5), e.body.position); 
-        } 
-        else if (e.type === 'floater_low') {
-           const hoverH = 3.0 + Math.cos(t * 0.005 + e.body.id); e.body.force.y += 30 * e.body.mass;
-           const hDiff = hoverH - e.body.position.y; e.body.applyForce(new CANNON.Vec3(d.x * 30, hDiff * 10, d.z * 30), e.body.position); 
-        } 
-        else if (e.type === 'jumper') {
-           if (e.body.position.y < 1.0 && e.body.velocity.y < 0.1) { e.body.velocity.y = 15; e.body.velocity.x = d.x * 10; e.body.velocity.z = d.z * 10; }
-        } 
-        else if (e.isPuzzleMinion) {
-            e.body.applyForce(d.scale(30), e.body.position);
-        }
-        else {
-           e.body.applyForce(d.scale(e.isGiant ? 100 : 20), e.body.position); 
-        }
-        if (vip && e.body.position.distanceTo(vip.body.position) < 2.0 && Math.random() < 0.05) { vip.hp -= 5; spawnParticle(vip.body.position, 5, 0xff0000); } 
-    } 
+  const target = enemies.find(e=>e.isTarget);
+  if(target && targetArrow) {
+    targetArrow.visible=true;
+    camera.getWorldPosition(_vecPos); camera.getWorldDirection(_vecDir);
+    targetArrow.position.copy(_vecPos).add(_vecDir.multiplyScalar(1.5));
+    targetArrow.lookAt(target.body.position.x, target.body.position.y, target.body.position.z);
+    targetArrow.rotateX(Math.PI/2);
+    target.time=(target.time||0)+dt; target.mesh.material.emissiveIntensity=0.5+Math.sin(target.time*5)*0.5;
+    if(target.mesh.children[0]){target.mesh.children[0].position.y=2+Math.sin(target.time*3)*0.5; target.mesh.children[0].rotation.z+=dt*2;}
+  } else if(targetArrow) targetArrow.visible=false;
+
+  kekkaiList.forEach(k=>{
+    if(!k.shrinking)return; k.mesh.scale.multiplyScalar(0.7);
+    const kb=new THREE.Box3().setFromObject(k.mesh);
+    enemies.forEach(e=>{ if(kb.intersectsBox(new THREE.Box3().setFromObject(e.mesh))) killEnemy(e); });
+    if(k.mesh.scale.x<0.05) { removeKekkai(k); spawnParticle(k.mesh.position,30,0xffaa00); }
   });
+
+  const fW=CFG.field.width, fD=CFG.field.depth;
+  enemies.forEach(e=>{
+    e.mesh.position.copy(e.body.position); e.mesh.quaternion.copy(e.body.quaternion);
+    if(e.body.position.y<-10) killEnemy(e);
+    const isOut=Math.abs(e.body.position.x)>fW/2+2 || Math.abs(e.body.position.z)>fD/2+2;
+    if(isOut){
+      if(gameState.missionType==='annihilation'){ killEnemy(e,true); showMsg("敵逃亡","#aaa"); return; }
+      if(e.body.velocity.length()<2 || (e.body.outsideTimer>2.0)){
+        const center=new CANNON.Vec3(0,25,0).vsub(e.body.position);
+        e.body.velocity.set(center.x*0.5, 30, center.z*0.5); e.body.outsideTimer=0; 
+      } else e.body.outsideTimer=(e.body.outsideTimer||0)+dt;
+    } else {
+      e.body.outsideTimer=0;
+      if(!e.isCompositeCore){
+        const tgt=(vip&&vip.hp>0)?vip.body.position:playerBody.position;
+        const d=tgt.vsub(e.body.position); d.normalize();
+        e.body.applyForce(d.scale(20), e.body.position);
+      }
+    }
+  });
+
+  if(t>gameState.nextSpawn) { spawnEnemy(); gameState.nextSpawn=t+3000-gameState.wave*100; }
+  items.forEach(it=>{ it.mesh.position.copy(it.body.position); it.mesh.rotation.y+=0.05; if(playerBody.position.distanceTo(it.body.position)<2){ healPlayer(20); safeRemoveMesh(it.mesh); world.removeBody(it.body); items=items.filter(i=>i!==it); } });
+
   renderer.render(scene, camera);
 }
 
 function init() {
   try {
-    if (els.version) els.version.textContent = `V: ${CFG.VERSION}`;
-      
-    scene = new THREE.Scene(); scene.background = new THREE.Color(CFG.colors.sky); scene.fog = new THREE.FogExp2(CFG.colors.sky, 0.005); 
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200); 
-    playerGroup = new THREE.Group(); playerGroup.add(camera); 
-    camera.position.set(0, CFG.player.height, 0); scene.add(playerGroup); 
-    renderer = new THREE.WebGLRenderer({ antialias: true }); 
-    renderer.setSize(window.innerWidth, window.innerHeight); 
-    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
-    renderer.xr.enabled = true; 
+    scene = new THREE.Scene(); scene.background = new THREE.Color(CFG.colors.sky); scene.fog=new THREE.FogExp2(CFG.colors.sky, 0.005);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 500);
+    playerGroup = new THREE.Group(); playerGroup.add(camera); scene.add(playerGroup);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight); renderer.shadowMap.enabled=true; renderer.xr.enabled=true;
     document.body.appendChild(renderer.domElement);
-
-    // Resize Handler
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
+    
     world = new CANNON.World(); world.gravity.set(0, -30, 0);
     const mDef=new CANNON.Material('def'), mPly=new CANNON.Material('ply'), mEne=new CANNON.Material('ene'), mKek=new CANNON.Material('kek');
-      
     world.addContactMaterial(new CANNON.ContactMaterial(mPly, mDef, { friction: 0.0, restitution: 0.0 }));
     world.addContactMaterial(new CANNON.ContactMaterial(mEne, mDef, { friction: 0.5, restitution: 0.3 }));
     world.addContactMaterial(new CANNON.ContactMaterial(mKek, mEne, { friction: 0.1, restitution: 0.8 }));
-    world.addContactMaterial(new CANNON.ContactMaterial(mKek, mPly, { friction: 0.0, restitution: 0.0 })); // Friction 0 for sliding on kekkai
+    world.addContactMaterial(new CANNON.ContactMaterial(mKek, mPly, { friction: 0.0, restitution: 0.0 })); 
     world.addContactMaterial(new CANNON.ContactMaterial(mPly, mEne, { friction: 0.5, restitution: 0.5 }));
-
-    playerBody = new CANNON.Body({ mass: 70, shape: new CANNON.Sphere(0.6), material: mPly, fixedRotation: true, linearDamping: 0.9, collisionFilterGroup: 1, collisionFilterMask: 1|2|4 }); // Group 1
+    
+    playerBody = new CANNON.Body({ mass: 70, shape: new CANNON.Sphere(0.6), material:mPly, fixedRotation: true, linearDamping: 0.9, collisionFilterGroup:1, collisionFilterMask:1|2|4 });
     playerBody.position.set(0, 5, 30); world.addBody(playerBody);
-    playerBody.addEventListener('collide', (e) => { if (e.body && e.body.material && e.body.material.name === 'ene') { const relVel = e.contact.getImpactVelocityAlongNormal(); if (Math.abs(relVel) > 2.0) { takeDamage(Math.floor(Math.abs(relVel) * 2)); const normal = new CANNON.Vec3(); e.contact.ni.negate(normal); playerBody.applyImpulse(normal.scale(50 * Math.abs(relVel)), playerBody.position); } } });
+    playerBody.addEventListener('collide', (e)=>{ if(e.body && e.body.material && e.body.material.name==='ene') { const v=e.contact.getImpactVelocityAlongNormal(); if(Math.abs(v)>2) { takeDamage(Math.floor(Math.abs(v)*2)); const n=new CANNON.Vec3(); e.contact.ni.negate(n); playerBody.applyImpulse(n.scale(50*Math.abs(v)), playerBody.position); } } });
 
     setupEnvironment(mDef);
+    
+    aimMarker = new THREE.Mesh(new THREE.SphereGeometry(0.3), new THREE.MeshBasicMaterial({color:CFG.colors.marker, transparent:true, opacity:0.7, depthTest:false})); scene.add(aimMarker);
+    targetArrow = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 8), new THREE.MeshBasicMaterial({color:0xffffff, depthTest:false, transparent:true, opacity:0.8})); targetArrow.visible=false; scene.add(targetArrow);
+
+    setupMobileInputs();
     setupVRControllers();
     setupVRHud();
-    setupMobileInputs();
-      
-    const aimGeo = new THREE.SphereGeometry(0.3, 16, 16); const aimMat = new THREE.MeshBasicMaterial({ color: CFG.colors.marker, transparent: true, opacity: 0.7, depthTest: false }); 
-    aimMarker = new THREE.Mesh(aimGeo, aimMat); aimMarker.renderOrder = 999; scene.add(aimMarker);
-
     startWave();
+    
+    window.addEventListener('resize', () => { camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    document.getElementById('vrBtn').addEventListener('click', async()=>{ if(!navigator.xr)return; const s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor','hand-tracking']}); renderer.xr.setSession(s); els.novr.forEach(e=>e.style.opacity=0); s.addEventListener('end',()=>{els.novr.forEach(e=>e.style.opacity=1);}); });
+
     renderer.setAnimationLoop(loop);
-  } catch (e) { console.error(e); alert("初期化エラー: " + e.message); }
+  } catch(e) { console.error(e); alert("Init Error: "+e.message); }
 }
 
-document.getElementById('vrBtn').addEventListener('click', async () => { if (currentSession) return; if (!navigator.xr) return; try { const session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking'] }); renderer.xr.setSession(session); currentSession = session; els.novr.forEach(e => e.style.opacity = 0); session.addEventListener('end', () => { currentSession = null; els.novr.forEach(e => e.style.opacity = 1); }); } catch (e) { console.error("VR Init Error:", e); alert("VRモードの起動に失敗しました: " + e.message); } });
+function takeDamage(v){ gameState.playerHp=Math.max(0,gameState.playerHp-v); els.dmgOverlay.style.opacity=0.5; setTimeout(()=>els.dmgOverlay.style.opacity=0,150); if(gameState.playerHp<=0)showMsg("GAME OVER","#f00"); }
+function healPlayer(v){ gameState.playerHp=Math.min(CFG.player.maxHp, gameState.playerHp+v); showMsg("RECOVER","#0f0"); }
+
 window.onload = init;
 </script>
 </body>
