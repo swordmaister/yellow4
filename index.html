@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<title>真・結界師VR v9.2 — Elevator & Balance</title>
+<title>真・結界師VR v9.4 — Focus Mode</title>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#87CEEB">
 <style>
@@ -39,6 +39,12 @@
   #centerReticle { position: fixed; top: 50%; left: 50%; width: 6px; height: 6px; background: rgba(255,255,255,0.8); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; border: 1px solid rgba(0,0,0,0.5); z-index: 500; }
   #vrBtn { position: fixed; top: 10px; right: 10px; padding: 12px 24px; background: rgba(0,0,0,0.8); border: 2px solid #0f0; color: #0f0; border-radius: 8px; z-index: 200; pointer-events: auto; font-weight: bold; cursor: pointer; font-size: 16px; box-shadow: 0 0 10px #0f0; }
 </style>
+<script>
+  window.onerror = function(msg, url, line) {
+    const box = document.getElementById('error-log'); box.style.display = 'block';
+    box.textContent += "Error: " + msg + "\nLine: " + line + "\n"; return false;
+  };
+</script>
 <script type="importmap">
 {
   "imports": {
@@ -88,8 +94,6 @@ const CFG = {
     drawPhys: 0xffff00, drawGhost: 0x00ffff, highlight: 0xff0044, marker: 0xff0000,
     wall: 0xa0a0a0, building: 0xf0f0f0, 
     enemy: 0xff4444, giant: 0x880000, target: 0xFFD700, item: 0x00ff00, vip: 0x0000ff,
-    wood: 0x8B4513, leaf: 0x228B22, iron: 0x333333, concrete: 0xaaaaaa,
-    floater_high: 0xffffee, floater_low: 0xff8800, jumper: 0x00ff88,
     puzzle_1: 0xff0000, puzzle_2: 0x00ff00, puzzle_3: 0x0000ff, puzzle_core: 0xffff00
   },
   player: { speed: 10.0, jump: 22.0, height: 1.7, maxHp: 100, maxSp: 100 },
@@ -107,11 +111,19 @@ let currentDist = CFG.dist.default, aimMarker, targetArrow, isPhysMode = false;
 let controllers = [], controllerGrips = [], vrHudMesh, vrHudCtx, vipGoalMesh = null;
 let lastT = 0, currentSession = null;
 let currentTargetKekkai = null;
+// 【追加】集中モード関連変数
+let isFocusing = false;
+let focusLaser = null;
+let groundMesh = null; // 地面をグローバル化
 
 let input = { x: 0, y: 0 }, camAngle = { yaw: 0, pitch: 0 };
 let stickId=null, stickStart={x:0,y:0}, tapTime=0, tapPos={x:0,y:0};
 let lookId=null, lastLook={x:0,y:0}, actId=null, actStartPos={x:0,y:0};
 let drawId=null, activePhysKekkai=null, drawState = { active:false, startX:0, startY:0, ghost:null };
+let distTouchStart = { x: 0, y: 0 };
+// 【追加】長押し判定用
+let distBtnTimer = null;
+let distBtnLongPressTriggered = false;
 
 let vrState = {
   left: { drawing:false, startHandPos:new THREE.Vector3(), startOrigin:new THREE.Vector3(), startDir:new THREE.Vector3(), mesh:null, body:null, triggerHeld:false },
@@ -157,7 +169,6 @@ function updateHUD() {
 }
 
 function createKekkai(p, s, r, isGhost=false) {
-  // Collision Group 2. Mask: 1(Player)|2(Kekkai)|4(Enemy)
   const b = new CANNON.Body({ mass: 0, material: new CANNON.Material('kek'), collisionFilterGroup: 2, collisionFilterMask: 1|2|4 });
   b.position.copy(p); b.quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0), r);
   if(!isGhost) { b.addShape(new CANNON.Box(new CANNON.Vec3(s.x/2, s.y/2, s.z/2))); } 
@@ -184,9 +195,14 @@ function spawnEnemy(forceType=null) {
   else if (r<0.8) { x=(Math.random()-.5)*(fW-5); z=(-fD / 2 - 20)+(Math.random()-.5)*30; y=35; }
   else { x=(fW/2-25)+(Math.random()-.5)*20; z=(Math.random()-.5)*50; y=10; }
 
-  const hpMult = 1 + Math.floor((gameState.wave-1)/5); // Scale HP with loop
+  const hpMult = 1 + Math.floor((gameState.wave-1)/5);
 
   if (forceType==='target') {
+    // Sky Ambush Pattern
+    if(Math.random() < 0.3) { 
+        y = 40 + Math.random()*20; 
+        showMsg("上空反応あり！", "#fa0"); 
+    }
     const sz=1.2; const b=new CANNON.Body({mass:20, shape:new CANNON.Sphere(sz), material:new CANNON.Material('ene'), linearDamping:0.4, collisionFilterGroup:4, collisionFilterMask:1|2|4});
     b.position.set(x,y,z); world.addBody(b);
     const m=new THREE.Mesh(new THREE.IcosahedronGeometry(sz,1), new THREE.MeshStandardMaterial({color:0xFFD700, emissive:0xffaa00, emissiveIntensity:0.5}));
@@ -258,22 +274,17 @@ function actionGlobalMetsu() { if(kekkaiList.length===0)return; if(gameState.pla
 function actionGlobalKai() { if(kekkaiList.length>0){showMsg("全解除","#4f8"); kekkaiList.forEach(k=>removeKekkai(k));} }
 function removeKekkai(k) { if(currentTargetKekkai===k)currentTargetKekkai=null; safeRemoveMesh(k.mesh); if(k.body)world.removeBody(k.body); kekkaiList=kekkaiList.filter(o=>o!==k); }
 
-// --------------------------------------------------
-// ENVIRONMENT (Restored)
-// --------------------------------------------------
 function setupEnvironment(mat){
   const sun=new THREE.DirectionalLight(0xffffee,1.2); sun.position.set(-50,100,50); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.camera.left=-100; sun.shadow.camera.right=100; sun.shadow.camera.top=100; sun.shadow.camera.bottom=-100; scene.add(sun); scene.add(new THREE.AmbientLight(0x555566,0.6));
-  const gGeo=new THREE.PlaneGeometry(CFG.field.width+40,CFG.field.depth+40); const gMat=new THREE.MeshStandardMaterial({color:CFG.colors.ground,roughness:0.9}); const ground=new THREE.Mesh(gGeo,gMat); ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground); const gBody=new CANNON.Body({mass:0,material:mat}); gBody.addShape(new CANNON.Plane()); gBody.quaternion.setFromEuler(-Math.PI/2,0,0); world.addBody(gBody);
+  const gGeo=new THREE.PlaneGeometry(CFG.field.width+40,CFG.field.depth+40); const gMat=new THREE.MeshStandardMaterial({color:CFG.colors.ground,roughness:0.9});
+  // 【変更】地面をグローバル変数に代入
+  groundMesh = new THREE.Mesh(gGeo,gMat); groundMesh.rotation.x=-Math.PI/2; groundMesh.receiveShadow=true; scene.add(groundMesh); const gBody=new CANNON.Body({mass:0,material:mat}); gBody.addShape(new CANNON.Plane()); gBody.quaternion.setFromEuler(-Math.PI/2,0,0); world.addBody(gBody);
   const createBox=(x,y,z,w,h,d,col,tr=false,op=1,rotY=0)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:col,transparent:tr,opacity:op})); m.position.set(x,y,z); m.rotation.y=rotY; m.castShadow=!tr; m.receiveShadow=true; scene.add(m); const b=new CANNON.Body({mass:0,material:mat}); b.addShape(new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))); b.position.copy(m.position); b.quaternion.copy(m.quaternion); world.addBody(b); return m; };
   const createVisualBox=(x,y,z,w,h,d,col,rotY=0)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:col})); m.position.set(x,y,z); m.rotation.y=rotY; m.castShadow=true; m.receiveShadow=true; scene.add(m); return m; };
 
-  const FW=CFG.field.width,FD=CFG.field.depth,WH=8;
-  const gateW = 24; const wallW = (FW - gateW) / 2;
-  createBox(-FW/2 + wallW/2, WH/2, FD/2+1, wallW, WH, 2, CFG.colors.wall); 
-  createBox(FW/2 - wallW/2, WH/2, FD/2+1, wallW, WH, 2, CFG.colors.wall); 
-  createBox(-FW/2-1,WH/2,0,2,WH,FD+2,CFG.colors.wall); 
-  createBox(FW/2+1,WH/2,0,2,WH,FD+2,CFG.colors.wall); 
-   
+  const FW=CFG.field.width,FD=CFG.field.depth,WH=8; const gateW = 24; const wallW = (FW - gateW) / 2;
+  createBox(-FW/2 + wallW/2, WH/2, FD/2+1, wallW, WH, 2, CFG.colors.wall); createBox(FW/2 - wallW/2, WH/2, FD/2+1, wallW, WH, 2, CFG.colors.wall); 
+  createBox(-FW/2-1,WH/2,0,2,WH,FD+2,CFG.colors.wall); createBox(FW/2+1,WH/2,0,2,WH,FD+2,CFG.colors.wall); 
   const bH=30,bZ=-FD/2-20; createBox(0,bH/2,bZ,FW,bH,40,CFG.colors.building);
   for(let i=-FW/2+5;i<FW/2;i+=10)for(let j=5;j<28;j+=7){const w=new THREE.Mesh(new THREE.PlaneGeometry(4,4),new THREE.MeshBasicMaterial({color:0x87CEFA})); w.position.set(i,j,bZ+20+0.1); scene.add(w);}
   createBox(0, bH+1, bZ, FW, 2, 40, CFG.colors.concrete);
@@ -283,9 +294,7 @@ function setupEnvironment(mat){
       const shape = new THREE.Shape(); shape.moveTo(0,0); shape.lineTo(0, rampH); shape.lineTo(rampW, 0); shape.lineTo(0,0);
       const geo = new THREE.ExtrudeGeometry(shape, { steps: 1, depth: length, bevelEnabled: false });
       const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: CFG.colors.concrete}));
-      m.position.set(0, 0, -length/2); 
-      const wrapper = new THREE.Object3D(); wrapper.add(m);
-      wrapper.position.set(x, bH+1, z); wrapper.rotation.y = rotY; scene.add(wrapper);
+      m.position.set(0, 0, -length/2); const wrapper = new THREE.Object3D(); wrapper.add(m); wrapper.position.set(x, bH+1, z); wrapper.rotation.y = rotY; scene.add(wrapper);
       const ang = Math.atan2(rampH, rampW); const hyp = Math.sqrt(rampH**2 + rampW**2);
       const b = new CANNON.Body({mass:0, material:mat});
       b.addShape(new CANNON.Box(new CANNON.Vec3(hyp/2, 0.1, length/2)), new CANNON.Vec3(rampW/2, rampH/2, 0), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1), -ang));
@@ -293,24 +302,20 @@ function setupEnvironment(mat){
       b.position.set(x, bH+1, z); b.quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0), rotY); world.addBody(b);
   };
   createRampFence(0, bZ-20, FW, -Math.PI/2); createRampFence(-FW/2, bZ, 40, 0); createRampFence(FW/2, bZ, 40, Math.PI);
-  const landW=8; const gapW = landW + 2; const landX = FW/2 - landW/2 - 2;
-  const gapStart = landX - gapW/2; const gapEnd = landX + gapW/2;
-  createRampFence((-FW/2 + gapStart)/2, bZ+20, gapStart - (-FW/2), Math.PI/2); 
-  createRampFence((gapEnd + FW/2)/2, bZ+20, FW/2 - gapEnd, Math.PI/2); 
+  const landW=8; const gapW = landW + 2; const landX = FW/2 - landW/2 - 2; const gapStart = landX - gapW/2; const gapEnd = landX + gapW/2;
+  createRampFence((-FW/2 + gapStart)/2, bZ+20, gapStart - (-FW/2), Math.PI/2); createRampFence((gapEnd + FW/2)/2, bZ+20, FW/2 - gapEnd, Math.PI/2); 
 
   const wtX = FW/2 - 8, wtZ = bZ - 8, wtBaseH = bH+2; const wtTank = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 6, 16), new THREE.MeshStandardMaterial({color: CFG.colors.concrete})); wtTank.position.set(wtX, wtBaseH + 8, wtZ); wtTank.castShadow=true; scene.add(wtTank); const wtTankBody = new CANNON.Body({mass:0, material:mat}); wtTankBody.addShape(new CANNON.Cylinder(4,4,6,16)); wtTankBody.position.copy(wtTank.position); world.addBody(wtTankBody);
   for(let i=0; i<4; i++){ const ang = i * Math.PI/2; const m=new THREE.Mesh(new THREE.BoxGeometry(0.5,5,0.5), new THREE.MeshStandardMaterial({color:CFG.colors.iron})); m.position.set(wtX + Math.cos(ang)*3, wtBaseH + 2.5, wtZ + Math.sin(ang)*3); scene.add(m); }
 
   const stW=6, stRise=bH, stRun=60; const landD=stW+2; const landY = bH; const landZ = bZ + 20 + landD/2;
   createBox(landX, landY, landZ, landW, 1, landD, CFG.colors.concrete); 
-  const slLen=Math.sqrt(stRun**2+stRise**2), slAng=Math.atan2(stRise, stRun); const slMidX = landX - landW/2 - stRun/2; const slMidY = stRise/2; 
-  const slZ = bZ + 20 + stW/2 + 0.05; 
+  const slLen=Math.sqrt(stRun**2+stRise**2), slAng=Math.atan2(stRise, stRun); const slMidX = landX - landW/2 - stRun/2; const slMidY = stRise/2; const slZ = bZ + 20 + stW/2 + 0.05; 
   const slB=new CANNON.Body({mass:0,material:mat}); slB.addShape(new CANNON.Box(new CANNON.Vec3(slLen/2,0.5,stW/2))); slB.position.set(slMidX, slMidY, slZ); const slQ = new THREE.Quaternion(); slQ.setFromEuler(new THREE.Euler(0,0,slAng)); slB.quaternion.copy(slQ); world.addBody(slB);
   const slM=new THREE.Mesh(new THREE.BoxGeometry(slLen,1,stW), new THREE.MeshStandardMaterial({color:CFG.colors.concrete})); slM.position.copy(slB.position); slM.quaternion.copy(slB.quaternion); scene.add(slM);
    
   const brRun=3.0, brRise=1.5; const brLen=Math.sqrt(brRun**2+brRise**2)+0.5; const brAng=Math.atan2(brRise, brRun); 
-  const brB = new CANNON.Body({mass:0, material:mat}); brB.addShape(new CANNON.Box(new CANNON.Vec3(landW/2, 0.2, brLen/2))); 
-  brB.position.set(landX, bH + 0.5 + brRise/2, bZ + 21.5); brB.quaternion.setFromEuler(brAng, 0, 0); world.addBody(brB);
+  const brB = new CANNON.Body({mass:0, material:mat}); brB.addShape(new CANNON.Box(new CANNON.Vec3(landW/2, 0.2, brLen/2))); brB.position.set(landX, bH + 0.5 + brRise/2, bZ + 21.5); brB.quaternion.setFromEuler(brAng, 0, 0); world.addBody(brB);
   const brM = new THREE.Mesh(new THREE.BoxGeometry(landW, 0.4, brLen), new THREE.MeshStandardMaterial({color:CFG.colors.concrete})); brM.position.copy(brB.position); brM.quaternion.copy(brB.quaternion); scene.add(brM);
    
   const hrH=1.2, hrT=0.1; const cRail = (x,y,z,w,h,d,rx=0,ry=0,rz=0) => { const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshStandardMaterial({color:CFG.colors.iron})); m.position.set(x,y,z); m.rotation.set(rx,ry,rz); scene.add(m); const b=new CANNON.Body({mass:0,material:mat}); b.addShape(new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))); b.position.copy(m.position); b.quaternion.copy(m.quaternion); world.addBody(b); };
@@ -324,20 +329,13 @@ function setupEnvironment(mat){
   const water = new THREE.Mesh(new THREE.PlaneGeometry(pW, pD), new THREE.MeshBasicMaterial({color:0x00aaff, transparent:true, opacity:0.6, side:THREE.DoubleSide})); water.rotation.x = -Math.PI/2; water.position.set(pX, pBaseH+1.5, pZ); scene.add(water);
   const prRun=25, prRise=pBaseH, prW=4; const prLen=Math.sqrt(prRun**2+prRise**2), prAng=Math.atan2(prRise, prRun);
   const prMidY = prRise/2; const prMidZ = pZ; 
-  const prMidX_L = pX - pW/2 - prW/2 - 2; 
-  const prB_L=new CANNON.Body({mass:0,material:mat}); prB_L.addShape(new CANNON.Box(new CANNON.Vec3(prW/2, 0.5, prLen/2))); prB_L.position.set(prMidX_L, prMidY, prMidZ);
-  const prQ_L = new THREE.Quaternion(); prQ_L.setFromEuler(new THREE.Euler(prAng, 0, 0)); prB_L.quaternion.copy(prQ_L); world.addBody(prB_L);
-  const prM_L=new THREE.Mesh(new THREE.BoxGeometry(prW, 1, prLen), new THREE.MeshStandardMaterial({color:CFG.colors.concrete})); prM_L.position.copy(prB_L.position); prM_L.quaternion.copy(prB_L.quaternion); scene.add(prM_L);
-  const prMidX_R = pX + pW/2 + prW/2 + 2;
-  const prB_R=new CANNON.Body({mass:0,material:mat}); prB_R.addShape(new CANNON.Box(new CANNON.Vec3(prW/2, 0.5, prLen/2))); prB_R.position.set(prMidX_R, prMidY, prMidZ);
-  const prQ_R = new THREE.Quaternion(); prQ_R.setFromEuler(new THREE.Euler(prAng, 0, 0)); prB_R.quaternion.copy(prQ_R); world.addBody(prB_R);
-  const prM_R=new THREE.Mesh(new THREE.BoxGeometry(prW, 1, prLen), new THREE.MeshStandardMaterial({color:CFG.colors.concrete})); prM_R.position.copy(prB_R.position); prM_R.quaternion.copy(prB_R.quaternion); scene.add(prM_R);
+  const prMidX_L = pX - pW/2 - prW/2 - 2; const prB_L=new CANNON.Body({mass:0,material:mat}); prB_L.addShape(new CANNON.Box(new CANNON.Vec3(prW/2, 0.5, prLen/2))); prB_L.position.set(prMidX_L, prMidY, prMidZ); const prQ_L = new THREE.Quaternion(); prQ_L.setFromEuler(new THREE.Euler(prAng, 0, 0)); prB_L.quaternion.copy(prQ_L); world.addBody(prB_L); const prM_L=new THREE.Mesh(new THREE.BoxGeometry(prW, 1, prLen), new THREE.MeshStandardMaterial({color:CFG.colors.concrete})); prM_L.position.copy(prB_L.position); prM_L.quaternion.copy(prB_L.quaternion); scene.add(prM_L);
+  const prMidX_R = pX + pW/2 + prW/2 + 2; const prB_R=new CANNON.Body({mass:0,material:mat}); prB_R.addShape(new CANNON.Box(new CANNON.Vec3(prW/2, 0.5, prLen/2))); prB_R.position.set(prMidX_R, prMidY, prMidZ); const prQ_R = new THREE.Quaternion(); prQ_R.setFromEuler(new THREE.Euler(prAng, 0, 0)); prB_R.quaternion.copy(prQ_R); world.addBody(prB_R); const prM_R=new THREE.Mesh(new THREE.BoxGeometry(prW, 1, prLen), new THREE.MeshStandardMaterial({color:CFG.colors.concrete})); prM_R.position.copy(prB_R.position); prM_R.quaternion.copy(prB_R.quaternion); scene.add(prM_R);
 
   const gZ = FD/2; createBox(-gateW/2-1, 4, gZ, 2, 8, 2, CFG.colors.wall); createBox(gateW/2+1, 4, gZ, 2, 8, 2, CFG.colors.wall);
   for(let i=-gateW/2; i<=gateW/2; i+=1.0) createVisualBox(i, 3, gZ, 0.2, 6, 0.2, CFG.colors.iron); 
   createVisualBox(0, 5.5, gZ, gateW, 0.3, 0.3, CFG.colors.iron); createVisualBox(0, 0.5, gZ, gateW, 0.3, 0.3, CFG.colors.iron);
   const gateB = new CANNON.Body({mass:0, material:mat}); gateB.addShape(new CANNON.Box(new CANNON.Vec3(gateW/2, 3, 0.1))); gateB.position.set(0, 3, gZ); world.addBody(gateB);
-
   const createTree = (x, z) => { const trunkH = 4 + Math.random()*2; createBox(x, trunkH/2, z, 1, trunkH, 1, CFG.colors.wood); const leaves = new THREE.Mesh(new THREE.IcosahedronGeometry(2.5 + Math.random(), 1), new THREE.MeshStandardMaterial({color:CFG.colors.leaf, roughness:0.8})); leaves.position.set(x, trunkH+2, z); leaves.castShadow=true; scene.add(leaves); };
   for(let i=0; i<5; i++) createTree(-FW/2+3, -FD/2 + 10 + i*20); for(let i=0; i<5; i++) createTree(FW/2-3, -FD/2 + 10 + i*20);
 }
@@ -356,25 +354,54 @@ function setupMobileInputs() {
   renderer.domElement.addEventListener('touchend',e=>{for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===lookId)lookId=null;});
 
   els.btnJump.addEventListener('touchstart',e=>{e.preventDefault(); if(Math.abs(playerBody.velocity.y)<1)playerBody.velocity.y=CFG.player.jump;});
-  // Mobile Distance Toggle: 6 -> 15 -> 35
-  els.btnDist.addEventListener('touchstart',e=>{e.preventDefault(); 
-      if(currentDist < 10) currentDist = 15; else if(currentDist < 20) currentDist = 35; else currentDist = 6;
-      els.distLabel.textContent = currentDist===6?"近":(currentDist===15?"中":"遠");
-      showMsg(`射程: ${currentDist}m`, "#fff");
+  
+  // 【変更】距離ボタン：長押し（集中モード）とスワイプ/タップ（距離変更）の共存
+  els.btnDist.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    distTouchStart={x:e.changedTouches[0].clientX, y:e.changedTouches[0].clientY};
+    // 長押しタイマー開始
+    distBtnLongPressTriggered = false;
+    distBtnTimer = setTimeout(() => {
+        isFocusing = !isFocusing; // モード切替
+        showMsg(isFocusing ? "集中モード ON" : "集中モード OFF", "#f00");
+        distBtnLongPressTriggered = true; // 長押し成立フラグ
+    }, 1000); // 1秒
+  });
+
+  els.btnDist.addEventListener('touchend',e=>{
+    e.preventDefault();
+    if(distBtnTimer) clearTimeout(distBtnTimer); // 指が離れたらタイマー解除
+    
+    // 長押しが成立していた場合は、スワイプ判定を行わずに終了
+    if(distBtnLongPressTriggered) return;
+
+    // 既存のスワイプ/タップ判定ロジック
+    const t=e.changedTouches[0]; const dx=t.clientX-distTouchStart.x, dy=t.clientY-distTouchStart.y;
+    if(Math.max(Math.abs(dx),Math.abs(dy))<10) { // Tap
+        if(currentDist<10)currentDist=15; else if(currentDist<20)currentDist=35; else currentDist=6;
+    } else { // Swipe
+        if(Math.abs(dx)>Math.abs(dy)) currentDist=15; // Side -> Mid
+        else { if(dy<0)currentDist=35; else currentDist=6; } // Up/Down
+    }
+    els.distLabel.textContent = currentDist===6?"近":(currentDist===15?"中":"遠");
+    showMsg(`射程: ${currentDist}m`, "#fff");
   });
   
   els.btnAct.addEventListener('touchstart',e=>{e.preventDefault(); if(actId)return; actId=e.changedTouches[0].identifier; actStartPos={x:e.changedTouches[0].clientX,y:e.changedTouches[0].clientY};});
-  els.btnAct.addEventListener('touchend',e=>{e.preventDefault(); for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===actId){ 
-      if(Math.hypot(e.changedTouches[i].clientX-actStartPos.x, e.changedTouches[i].clientY-actStartPos.y)>20) actionKai(); 
-      else actionMetsu(); 
-      actId=null; 
-  }});
+  els.btnAct.addEventListener('touchend',e=>{e.preventDefault(); for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===actId){ if(Math.hypot(e.changedTouches[i].clientX-actStartPos.x, e.changedTouches[i].clientY-actStartPos.y)>20) actionKai(); else actionMetsu(); actId=null; }});
   
   els.modeBtn.addEventListener('touchstart',e=>{e.preventDefault(); e.stopPropagation(); isPhysMode=!isPhysMode; els.modeBtn.textContent=isPhysMode?"モード: 顕現":"モード: 幽体"; els.modeBtn.className=isPhysMode?"phys":"ghost"; els.btnDraw.style.background=isPhysMode?"linear-gradient(135deg,#FFD700,#FF8C00)":"linear-gradient(135deg,#03a9f4,#0288d1)"; els.btnDraw.innerHTML=isPhysMode?"顕<br><span style='font-size:10px'>Hold</span>":"結<br><span style='font-size:10px'>Hold</span>";});
 
   els.btnDraw.addEventListener('touchstart',e=>{e.preventDefault(); if(drawId)return; const t=e.changedTouches[0]; drawId=t.identifier; els.btnDraw.classList.add('drawing');
     if(isPhysMode){ activePhysKekkai=createActiveMobile(); activePhysKekkai.startX=t.clientX; activePhysKekkai.startY=t.clientY; }
-    else { drawState.active=true; drawState.startX=t.clientX; drawState.startY=t.clientY; const g=new THREE.BoxGeometry(1,1,1), m=new THREE.MeshBasicMaterial({color:CFG.colors.drawGhost, transparent:true, opacity:0.3}); drawState.ghost=new THREE.Mesh(g,m); drawState.ghost.position.copy(aimMarker.position).sub(new THREE.Vector3(0,0.5,0)); drawState.ghost.rotation.y=camAngle.yaw; scene.add(drawState.ghost); }
+    else { 
+        drawState.active=true; drawState.startX=t.clientX; drawState.startY=t.clientY; 
+        const g=new THREE.BoxGeometry(1,1,1);
+        const m=new THREE.MeshBasicMaterial({color:CFG.colors.drawGhost, transparent:true, opacity:0.2}); // Ghost Translucent
+        drawState.ghost=new THREE.Mesh(g,m); 
+        drawState.ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({color:0xffffff, transparent:false, opacity:1})));
+        drawState.ghost.position.copy(aimMarker.position).sub(new THREE.Vector3(0,0.5,0)); drawState.ghost.rotation.y=camAngle.yaw; scene.add(drawState.ghost); 
+    }
   });
   els.btnDraw.addEventListener('touchmove',e=>{e.preventDefault(); if(!drawId)return; for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===drawId){
     const t=e.changedTouches[i];
@@ -409,7 +436,15 @@ function handleVRInput() {
       if(gp.buttons[5].pressed){ if(!vrState.right.bBtnHeld){vrState.right.bBtnHeld=true; vrState.right.lastDistZ=ctrl.position.z;} const dz=(vrState.right.lastDistZ-ctrl.position.z)*20; currentDist=Math.max(0,Math.min(40,currentDist+dz)); vrState.right.lastDistZ=ctrl.position.z; } else vrState.right.bBtnHeld=false;
       if(gp.buttons[0].pressed){ if(!vrState.right.triggerHeld){actionMetsu(); vrState.right.triggerHeld=true;} } else vrState.right.triggerHeld=false;
       const grip=gp.buttons[1].pressed;
-      if(grip){ if(!vrState.right.drawing){ vrState.right.drawing=true; vrState.right.startHandPos.copy(ctrl.position); vrState.right.startOrigin.copy(aimMarker.position); vrState.right.startDir.copy(_vecDir); vrState.right.mesh=new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color:0x00ffff, transparent:true, opacity:0.3})); scene.add(vrState.right.mesh); } else updateDynamicBarrier(vrState.right, ctrl.position, false); }
+      if(grip){ 
+          if(!vrState.right.drawing){ 
+              vrState.right.drawing=true; vrState.right.startHandPos.copy(ctrl.position); vrState.right.startOrigin.copy(aimMarker.position); vrState.right.startDir.copy(_vecDir); 
+              const g=new THREE.BoxGeometry(1,1,1); const m=new THREE.MeshBasicMaterial({color:0x00ffff, transparent:true, opacity:0.2}); 
+              vrState.right.mesh=new THREE.Mesh(g,m); 
+              vrState.right.mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({color:0xffffff, transparent:false, opacity:1})));
+              scene.add(vrState.right.mesh); 
+          } else updateDynamicBarrier(vrState.right, ctrl.position, false); 
+      }
       else if(vrState.right.drawing){ createKekkai(vrState.right.mesh.position, vrState.right.mesh.scale, 0, true); safeRemoveMesh(vrState.right.mesh); vrState.right.drawing=false; }
     }
   }
@@ -418,7 +453,7 @@ function handleVRInput() {
 
 function updateDynamicBarrier(state, currentHandPos, updatePhysics) {
   const isGhost = !updatePhysics;
-  const sens = CFG.kekkai.sensitivity * (isGhost ? 1.5 : 1.0); // 150% sensitivity for Ghost
+  const sens = CFG.kekkai.sensitivity * (isGhost ? 1.5 : 1.0);
   const dx=Math.abs(currentHandPos.x-state.startHandPos.x), dy=Math.abs(currentHandPos.y-state.startHandPos.y), dz=Math.abs(currentHandPos.z-state.startHandPos.z);
   const hMove=Math.sqrt(dx*dx+dz*dz);
   const sx=1.0+hMove*sens, sy=1.0+dy*sens, sz=1.0+hMove*sens;
@@ -428,7 +463,6 @@ function updateDynamicBarrier(state, currentHandPos, updatePhysics) {
   state.mesh.scale.set(sx,sy,sz);
   if(updatePhysics && state.body){
     world.removeBody(state.body);
-    // Phys Barrier has collision mask 1|2|4 immediately for Elevator
     const nb=new CANNON.Body({mass:0, collisionFilterGroup:2, collisionFilterMask:1|2|4});
     nb.position.copy(state.mesh.position); nb.addShape(new CANNON.Box(new CANNON.Vec3(sx/2,sy/2,sz/2)));
     world.addBody(nb); state.body=nb;
@@ -455,38 +489,90 @@ function updateAimMarker() {
   if(!playerGroup||!aimMarker)return;
   camera.updateMatrixWorld(true);
   camera.getWorldPosition(_vecPos); camera.getWorldDirection(_vecDir);
-  aimMarker.position.copy(_vecPos).add(_vecDir.clone().multiplyScalar(currentDist));
-  aimMarker.rotation.y = Math.atan2(_vecDir.x, _vecDir.z);
-  aimMarker.visible = true;
-  
-  let bestCandidate = null;
-  raycaster.set(_vecPos, _vecDir);
-  const intersects = raycaster.intersectObjects(kekkaiList.map(k => k.mesh));
-  if (intersects.length > 0) { bestCandidate = kekkaiList.find(k => k.mesh === intersects[0].object); }
-  
-  if(!bestCandidate) {
-      let minD = 999;
-      kekkaiList.forEach(k => {
-          const kPos = k.mesh.position; const vecToK = kPos.clone().sub(_vecPos); const t = vecToK.dot(_vecDir);
-          if (t > 0 && t < CFG.dist.max + 20) {
-              const closestPoint = _vecPos.clone().add(_vecDir.clone().multiplyScalar(t));
-              const dist = kPos.distanceTo(closestPoint);
-              const size = Math.max(k.mesh.scale.x, k.mesh.scale.y, k.mesh.scale.z);
-              if (dist < CFG.aimAssist.baseRadius + (size * 0.5)) { if(dist<minD){minD=dist; bestCandidate=k;} }
-          }
-      });
-  }
 
-  if (currentTargetKekkai && currentTargetKekkai !== bestCandidate) { if(currentTargetKekkai.edges && currentTargetKekkai.edges.material) { currentTargetKekkai.edges.material.color.setHex(0xffffff); currentTargetKekkai.edges.material.linewidth = 1; } }
-  currentTargetKekkai = bestCandidate;
-  if (currentTargetKekkai) { if(currentTargetKekkai.edges && currentTargetKekkai.edges.material) { currentTargetKekkai.edges.material.color.setHex(CFG.colors.highlight); currentTargetKekkai.edges.material.linewidth = 3; } }
+  // 【変更】集中モードか通常モードかで挙動を分岐
+  if (isFocusing) {
+    // ■ 集中モード（レーザーポインター式）
+    focusLaser.visible = true;
+    aimMarker.material.color.setHex(0xff0000); // 赤色に
+
+    // レーザーの始点
+    const rayStart = _vecPos.clone();
+    // 画面中央へレイを飛ばす
+    raycaster.set(rayStart, _vecDir);
+
+    // 衝突対象：敵、地面
+    const targets = enemies.map(e => e.mesh);
+    if(groundMesh) targets.push(groundMesh);
+
+    const hits = raycaster.intersectObjects(targets, true);
+    let targetPoint;
+
+    if (hits.length > 0) {
+        targetPoint = hits[0].point;
+    } else {
+        // 何もなければ100m先
+        targetPoint = rayStart.clone().add(_vecDir.clone().multiplyScalar(100));
+    }
+    
+    // マーカー移動
+    aimMarker.position.copy(targetPoint);
+    
+    // レーザー描画更新
+    const positions = focusLaser.geometry.attributes.position.array;
+    // 始点（カメラより少し下）
+    positions[0] = rayStart.x; positions[1] = rayStart.y - 0.2; positions[2] = rayStart.z;
+    // 終点
+    positions[3] = targetPoint.x; positions[4] = targetPoint.y; positions[5] = targetPoint.z;
+    focusLaser.geometry.attributes.position.needsUpdate = true;
+    
+    // ターゲット結界の選択（スナップ用ではなく情報用として）
+    currentTargetKekkai = null;
+
+  } else {
+    // ■ 通常モード（距離固定 + スナップ）
+    focusLaser.visible = false;
+    aimMarker.material.color.setHex(CFG.colors.marker);
+
+    // 既存ロジック：固定距離へ移動
+    aimMarker.position.copy(_vecPos).add(_vecDir.clone().multiplyScalar(currentDist));
+    aimMarker.rotation.y = Math.atan2(_vecDir.x, _vecDir.z);
+    
+    // 結界へのスナップロジック
+    let bestCandidate = null;
+    raycaster.set(_vecPos, _vecDir);
+    const intersects = raycaster.intersectObjects(kekkaiList.map(k => k.mesh));
+    if (intersects.length > 0) { bestCandidate = kekkaiList.find(k => k.mesh === intersects[0].object); }
+    
+    if(!bestCandidate) {
+        let minD = 999;
+        kekkaiList.forEach(k => {
+            const kPos = k.mesh.position; const vecToK = kPos.clone().sub(_vecPos); const t = vecToK.dot(_vecDir);
+            if (t > 0 && t < CFG.dist.max + 20) {
+                const closestPoint = _vecPos.clone().add(_vecDir.clone().multiplyScalar(t));
+                const dist = kPos.distanceTo(closestPoint);
+                const size = Math.max(k.mesh.scale.x, k.mesh.scale.y, k.mesh.scale.z);
+                if (dist < CFG.aimAssist.baseRadius + (size * 0.5)) { if(dist<minD){minD=dist; bestCandidate=k;} }
+            }
+        });
+    }
+
+    if (currentTargetKekkai && currentTargetKekkai !== bestCandidate) { if(currentTargetKekkai.edges && currentTargetKekkai.edges.material) { currentTargetKekkai.edges.material.color.setHex(0xffffff); currentTargetKekkai.edges.material.linewidth = 1; } }
+    currentTargetKekkai = bestCandidate;
+    if (currentTargetKekkai) { if(currentTargetKekkai.edges && currentTargetKekkai.edges.material) { currentTargetKekkai.edges.material.color.setHex(CFG.colors.highlight); currentTargetKekkai.edges.material.linewidth = 3; } }
+  }
 }
 
 function loop(t) {
   const dt=Math.min((t-lastT)/1000, 0.1); lastT=t;
   world.step(1/60, dt, 3);
   
+  // SP Logic (Maintain Cost)
   gameState.playerSp = Math.min(100, gameState.playerSp + CFG.kekkai.spRegen*dt);
+  const maintainCost = kekkaiList.length * 1.0; // 1 SP per barrier
+  gameState.playerSp -= maintainCost * dt;
+  if(gameState.playerSp <= 0) { gameState.playerSp = 0; if(kekkaiList.length>0){ actionGlobalKai(); showMsg("霊力枯渇!!", "#f00"); } }
+
   updateHUD();
 
   raycaster.set(playerBody.position, new THREE.Vector3(0,-1,0));
@@ -507,7 +593,10 @@ function loop(t) {
   if(target && targetArrow) {
     targetArrow.visible=true;
     camera.getWorldPosition(_vecPos); camera.getWorldDirection(_vecDir);
-    targetArrow.position.copy(_vecPos).add(_vecDir.multiplyScalar(1.5));
+    _vecRight.crossVectors(_vecDir, _vecUp).normalize();
+    // Arrow Offset (Right & Smaller)
+    targetArrow.scale.set(0.6, 0.6, 0.6);
+    targetArrow.position.copy(_vecPos).add(_vecDir.multiplyScalar(1.5)).add(_vecRight.multiplyScalar(0.4));
     targetArrow.lookAt(target.body.position.x, target.body.position.y, target.body.position.z);
     targetArrow.rotateX(Math.PI/2);
     target.time=(target.time||0)+dt; target.mesh.material.emissiveIntensity=0.5+Math.sin(target.time*5)*0.5;
@@ -573,6 +662,14 @@ function init() {
     
     aimMarker = new THREE.Mesh(new THREE.SphereGeometry(0.3), new THREE.MeshBasicMaterial({color:CFG.colors.marker, transparent:true, opacity:0.7, depthTest:false})); scene.add(aimMarker);
     targetArrow = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 8), new THREE.MeshBasicMaterial({color:0xffffff, depthTest:false, transparent:true, opacity:0.8})); targetArrow.visible=false; scene.add(targetArrow);
+
+    // 【追加】レーザー照準の初期化
+    const lGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const lMat = new THREE.LineBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.7 });
+    focusLaser = new THREE.Line(lGeo, lMat);
+    focusLaser.visible = false;
+    focusLaser.frustumCulled = false;
+    scene.add(focusLaser);
 
     setupMobileInputs();
     setupVRControllers();
