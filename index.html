@@ -2,19 +2,22 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<title>真・結界師VR v9.4 — Focus Mode</title>
+<title>真・結界師VR v10.9 — Sensitivity Tuned (Fixed)</title>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#87CEEB">
+<meta name="theme-color" content="#222">
 <style>
-  html, body { height: 100%; margin: 0; background: #87CEEB; color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+  html, body { height: 100%; margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
   canvas { display: block; width: 100%; height: 100%; outline: none; }
   #error-log { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:#ff5555; padding:20px; z-index:9999; white-space:pre-wrap; font-weight:bold; overflow:auto; }
   #damage-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 60%, red 100%); opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.1s; }
+  #jamming-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, rgba(255,0,255,0.2) 0px, rgba(255,0,255,0.2) 2px, transparent 2px, transparent 4px); opacity: 0; pointer-events: none; z-index: 55; mix-blend-mode: screen; transition: opacity 0.2s; }
   .novr-only { transition: opacity 0.5s; }
   #hud { position: fixed; top: 16px; left: 16px; pointer-events: none; z-index: 10; }
   @supports (padding-top: env(safe-area-inset-top)) { #hud { top: calc(env(safe-area-inset-top) + 10px); left: calc(env(safe-area-inset-left) + 16px); } }
   .hud-box { background: rgba(0, 30, 60, 0.6); padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); margin-bottom: 8px; backdrop-filter: blur(4px); min-width: 140px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
   .big-text { font-size: 18px; font-weight: bold; color: #ffeb3b; text-shadow: 1px 1px 2px #000; }
+  .boss-text { font-size: 20px; font-weight: 900; color: #ff0055; text-shadow: 0 0 5px #f00, 2px 2px 0 #000; animation: pulse 1s infinite alternate; }
+  @keyframes pulse { from { opacity: 0.8; transform: scale(1); } to { opacity: 1; transform: scale(1.05); } }
   .sub-text { font-size: 14px; color: #fff; text-shadow: 1px 1px 1px #000; }
   .bar-bg { width: 100%; height: 8px; background: #555; margin-top: 4px; border-radius: 4px; overflow: hidden; }
   .hp-val { width: 100%; height: 100%; background: #0f0; transition: width 0.2s; }
@@ -28,6 +31,7 @@
   .stick-knob { width: 60px; height: 60px; background: #fff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none; }
   .btn { position: absolute; width: 65px; height: 65px; z-index: 10; border-radius: 50%; border: 2px solid rgba(255,255,255,0.6); background: rgba(40,50,80,0.8); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; pointer-events: auto; touch-action: manipulation; transition: transform 0.1s; }
   .btn:active { transform: scale(0.9); background: rgba(60,70,100,0.9); }
+  .btn.disabled { filter: grayscale(100%); opacity: 0.5; pointer-events: none; }
   #btnUp { top: 0; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #607d8b, #455a64); }
   #btnDown { bottom: 0; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #9c27b0, #7b1fa2); width: 75px; height: 75px; font-size: 16px; }
   #btnLeft { top: 50%; left: 0; transform: translateY(-50%); background: linear-gradient(135deg, #f44336, #c62828); }
@@ -56,11 +60,12 @@
 </script>
 </head>
 <body>
-<div id="error-log"></div><div id="damage-overlay"></div>
+<div id="error-log"></div><div id="damage-overlay"></div><div id="jamming-overlay"></div>
 <div id="hud" class="novr-only">
   <div class="hud-box">
     <div class="mission-info" id="missionText">Loading...</div>
     <span class="big-text" id="waveVal">WAVE 1</span><br>
+    <div id="bossLabel" class="boss-text" style="display:none;">BOSS 結界食い</div>
     <span class="sub-text">ノルマ: <span id="targetVal" style="color:#f88;">-</span></span>
   </div>
   <div class="hud-box">
@@ -97,7 +102,7 @@ const CFG = {
     puzzle_1: 0xff0000, puzzle_2: 0x00ff00, puzzle_3: 0x0000ff, puzzle_core: 0xffff00
   },
   player: { speed: 10.0, jump: 22.0, height: 1.7, maxHp: 100, maxSp: 100 },
-  kekkai: { sensitivity: 300.0, spCostPerSec: 1.0, spRegen: 5.0, metsuCost: 2.0 },
+  kekkai: { sensitivity: 150.0, spCostPerSec: 1.0, spRegen: 5.0, metsuCost: 2.0 },
   dist: { min: 0.0, max: 40.0, default: 6.0 },
   aimAssist: { baseRadius: 1.5 },
   field: { width: 120, depth: 160 }
@@ -106,24 +111,24 @@ const CFG = {
 let scene, camera, renderer, world;
 let playerBody, playerGroup;
 let enemies = [], kekkaiList = [], items = [], vip = null;
-let gameState = { wave: 1, req: 5, nextSpawn: 0, playerHp: 100, playerSp: 100, missionType: 'normal', enemiesToSpawn: 0, puzzle: null };
+let gameState = { wave: 5, req: 5, nextSpawn: 0, playerHp: 100, playerSp: 100, missionType: 'normal', enemiesToSpawn: 0, puzzle: null };
 let currentDist = CFG.dist.default, aimMarker, targetArrow, isPhysMode = false;
 let controllers = [], controllerGrips = [], vrHudMesh, vrHudCtx, vipGoalMesh = null;
 let lastT = 0, currentSession = null;
 let currentTargetKekkai = null;
-// 【追加】集中モード関連変数
 let isFocusing = false;
 let focusLaser = null;
-let groundMesh = null; // 地面をグローバル化
+let groundMesh = null;
+let damageCooldown = 0; // 【修正】無敵時間管理用変数
 
 let input = { x: 0, y: 0 }, camAngle = { yaw: 0, pitch: 0 };
 let stickId=null, stickStart={x:0,y:0}, tapTime=0, tapPos={x:0,y:0};
 let lookId=null, lastLook={x:0,y:0}, actId=null, actStartPos={x:0,y:0};
 let drawId=null, activePhysKekkai=null, drawState = { active:false, startX:0, startY:0, ghost:null };
 let distTouchStart = { x: 0, y: 0 };
-// 【追加】長押し判定用
 let distBtnTimer = null;
 let distBtnLongPressTriggered = false;
+let drawCooldown = 0;
 
 let vrState = {
   left: { drawing:false, startHandPos:new THREE.Vector3(), startOrigin:new THREE.Vector3(), startDir:new THREE.Vector3(), mesh:null, body:null, triggerHeld:false },
@@ -133,7 +138,7 @@ let vrState = {
 const raycaster = new THREE.Raycaster();
 const _vecDir = new THREE.Vector3(), _vecPos = new THREE.Vector3(), _vecRight = new THREE.Vector3(), _vecUp = new THREE.Vector3(0,1,0);
 
-const els = { stick: document.getElementById('stickZone'), knob: document.getElementById('stickKnob'), msg: document.getElementById('flashMsg'), btnDist: document.getElementById('btnUp'), btnJump: document.getElementById('btnDown'), btnAct: document.getElementById('btnLeft'), btnDraw: document.getElementById('btnRight'), modeBtn: document.getElementById('modeSwitch'), distLabel: document.getElementById('distLabel'), wVal: document.getElementById('waveVal'), tVal: document.getElementById('targetVal'), hpText: document.getElementById('hpText'), hpBar: document.getElementById('hpBar'), spText: document.getElementById('spText'), spBar: document.getElementById('spBar'), dmgOverlay: document.getElementById('damage-overlay'), vipBox: document.getElementById('vipBox'), vipHpBar: document.getElementById('vipHpBar'), novr: document.querySelectorAll('.novr-only'), missionText: document.getElementById('missionText') };
+const els = { stick: document.getElementById('stickZone'), knob: document.getElementById('stickKnob'), msg: document.getElementById('flashMsg'), btnDist: document.getElementById('btnUp'), btnJump: document.getElementById('btnDown'), btnAct: document.getElementById('btnLeft'), btnDraw: document.getElementById('btnRight'), modeBtn: document.getElementById('modeSwitch'), distLabel: document.getElementById('distLabel'), wVal: document.getElementById('waveVal'), tVal: document.getElementById('targetVal'), hpText: document.getElementById('hpText'), hpBar: document.getElementById('hpBar'), spText: document.getElementById('spText'), spBar: document.getElementById('spBar'), dmgOverlay: document.getElementById('damage-overlay'), jammingOverlay: document.getElementById('jamming-overlay'), vipBox: document.getElementById('vipBox'), vipHpBar: document.getElementById('vipHpBar'), novr: document.querySelectorAll('.novr-only'), missionText: document.getElementById('missionText'), bossLabel: document.getElementById('bossLabel') };
 
 function showMsg(t, c) { els.msg.textContent = t; els.msg.style.color = c; els.msg.style.opacity = 1; setTimeout(() => els.msg.style.opacity = 0, 800); }
 function spawnText(s, p, c) { 
@@ -155,15 +160,24 @@ function updateHUD() {
   els.hpText.textContent=Math.floor(gameState.playerHp); els.hpBar.style.width=(gameState.playerHp)+"%"; els.hpBar.style.backgroundColor=gameState.playerHp<30?"#f00":"#0f0";
   els.spText.textContent=Math.floor(gameState.playerSp); els.spBar.style.width=(gameState.playerSp)+"%"; els.spBar.style.backgroundColor=gameState.playerSp<20?"#f00":"#00bfff";
   els.wVal.textContent="WAVE "+gameState.wave; els.tVal.textContent=gameState.req>0?gameState.req:"CLEAR!";
+  els.bossLabel.style.display = (gameState.missionType === 'boss_eater') ? 'block' : 'none';
+  if(drawCooldown > 0) {
+      els.btnDraw.classList.add('disabled');
+      els.jammingOverlay.style.opacity = 0.8;
+  } else {
+      els.btnDraw.classList.remove('disabled');
+      els.jammingOverlay.style.opacity = 0;
+  }
   if(renderer.xr.isPresenting && vrHudCtx){
     const ctx=vrHudCtx; ctx.clearRect(0,0,512,128); ctx.fillStyle="rgba(0,20,40,0.6)"; ctx.fillRect(0,0,512,128); ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.strokeRect(2,2,508,124);
     ctx.font="bold 24px sans-serif"; ctx.fillStyle="#ffeb3b"; ctx.fillText(`WAVE ${gameState.wave}`,20,30);
+    if(gameState.missionType==='boss_eater') { ctx.fillStyle="#ff0055"; ctx.fillText(`BOSS 結界食い`, 140, 30); }
     ctx.font="20px sans-serif"; ctx.fillStyle="#fff"; ctx.fillText(`残: ${gameState.req}`,20,60); ctx.fillText(`距離: ${currentDist.toFixed(1)}m`,20,90);
     ctx.fillStyle=gameState.playerHp<30?"#f55":"#0f0"; ctx.fillText(`HP: ${Math.floor(gameState.playerHp)}`,300,30);
     ctx.fillStyle="#555"; ctx.fillRect(300,35,180,15); ctx.fillStyle=gameState.playerHp<30?"#f00":"#0f0"; ctx.fillRect(300,35,180*(gameState.playerHp/100),15);
     ctx.fillStyle="#0ff"; ctx.fillText(`SP: ${Math.floor(gameState.playerSp)}`,300,75);
     ctx.fillStyle="#555"; ctx.fillRect(300,80,180,15); ctx.fillStyle=gameState.playerSp<20?"#f00":"#00bfff"; ctx.fillRect(300,80,180*(gameState.playerSp/100),15);
-    if(vip) { ctx.fillStyle="#0ff"; ctx.fillText(`VIP: ${vip.hp}%`,20,115); }
+    if(drawCooldown > 0) { ctx.fillStyle="#f0f"; ctx.fillText("！共鳴妨害！", 20, 115); }
     vrHudMesh.material.map.needsUpdate=true;
   }
 }
@@ -188,8 +202,11 @@ function createKekkai(p, s, r, isGhost=false) {
 
 function spawnEnemy(forceType=null) {
   if (gameState.missionType === 'annihilation' && gameState.enemiesToSpawn <= 0) return;
-  if (gameState.missionType.startsWith('boss')) return; 
-  if (enemies.length >= 15) return;
+  if (gameState.missionType === 'boss_composite' || gameState.missionType === 'boss_puzzle') return;
+  if (gameState.missionType === 'boss_eater' && !forceType) {
+      if(enemies.filter(e => !e.isBoss).length >= 10) return;
+  } else if (gameState.missionType !== 'boss_eater' && enemies.length >= 15) return;
+
   const r = Math.random(); let x, y, z; const fW=CFG.field.width, fD=CFG.field.depth;
   if (r<0.6) { x=(Math.random()-.5)*fW; z=(Math.random()-.5)*fD; y=20; }
   else if (r<0.8) { x=(Math.random()-.5)*(fW-5); z=(-fD / 2 - 20)+(Math.random()-.5)*30; y=35; }
@@ -197,12 +214,18 @@ function spawnEnemy(forceType=null) {
 
   const hpMult = 1 + Math.floor((gameState.wave-1)/5);
 
-  if (forceType==='target') {
-    // Sky Ambush Pattern
-    if(Math.random() < 0.3) { 
-        y = 40 + Math.random()*20; 
-        showMsg("上空反応あり！", "#fa0"); 
-    }
+  if (forceType === 'boss_eater_core') {
+      y = 40; x = 0; z = 0;
+      const sz = 2.5;
+      const b = new CANNON.Body({mass:500, shape:new CANNON.Sphere(sz), material:new CANNON.Material('ene'), collisionFilterGroup:4, collisionFilterMask:1|2|4});
+      b.linearDamping = 0.9;
+      b.position.set(x,y,z); world.addBody(b);
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(sz,2), new THREE.MeshStandardMaterial({color:0xFF0055, emissive:0x550022, roughness:0.2}));
+      scene.add(m);
+      enemies.push({body:b, mesh:m, isBoss:true, hp:30*hpMult, floatOffset: Math.random()*100});
+      spawnText("BOSS!!", new THREE.Vector3(x,y,z), "#f00");
+  } else if (forceType==='target') {
+    if(Math.random() < 0.3) { y = 40 + Math.random()*20; showMsg("上空反応あり！", "#fa0"); }
     const sz=1.2; const b=new CANNON.Body({mass:20, shape:new CANNON.Sphere(sz), material:new CANNON.Material('ene'), linearDamping:0.4, collisionFilterGroup:4, collisionFilterMask:1|2|4});
     b.position.set(x,y,z); world.addBody(b);
     const m=new THREE.Mesh(new THREE.IcosahedronGeometry(sz,1), new THREE.MeshStandardMaterial({color:0xFFD700, emissive:0xffaa00, emissiveIntensity:0.5}));
@@ -210,10 +233,13 @@ function spawnEnemy(forceType=null) {
     scene.add(m); enemies.push({body:b, mesh:m, isTarget:true, hp:5*hpMult, time:0});
   } else {
     let type='normal', sz=0.6+Math.random()*0.8, col=new THREE.Color().setHSL(Math.random(),0.8,0.5), ms=15*sz;
-    const typeR=Math.random();
-    if(typeR<0.2){ type='floater_high'; col.setHex(CFG.colors.floater_high); y=15; ms=5; }
-    else if(typeR<0.4){ type='floater_low'; col.setHex(CFG.colors.floater_low); y=5; ms=10; }
-    else if(typeR<0.6){ type='jumper'; col.setHex(CFG.colors.jumper); y=5; ms=20; }
+    if (gameState.missionType === 'boss_eater') { col.setHex(0xaa2222); } 
+    else {
+        const typeR=Math.random();
+        if(typeR<0.2){ type='floater_high'; col.setHex(CFG.colors.floater_high); y=15; ms=5; }
+        else if(typeR<0.4){ type='floater_low'; col.setHex(CFG.colors.floater_low); y=5; ms=10; }
+        else if(typeR<0.6){ type='jumper'; col.setHex(CFG.colors.jumper); y=5; ms=20; }
+    }
     const b=new CANNON.Body({mass:ms, shape:new CANNON.Sphere(sz), material:new CANNON.Material('ene'), linearDamping:0.4, collisionFilterGroup:4, collisionFilterMask:1|2|4});
     b.position.set(x,y,z); world.addBody(b);
     let geo; if(type==='floater_high')geo=new THREE.OctahedronGeometry(sz,0); else if(type==='floater_low')geo=new THREE.ConeGeometry(sz,sz*2,8); else if(type==='jumper')geo=new THREE.TorusGeometry(sz*0.6,sz*0.2,8,16); else geo=new THREE.IcosahedronGeometry(sz,0);
@@ -235,13 +261,51 @@ function killEnemy(e, isEscape=false) {
       }
       if(e.isPuzzleCore && e.isInvincible && !isEscape) { spawnText("無敵", e.mesh.position, "#888"); const push = e.body.position.vsub(playerBody.position); push.normalize(); e.body.applyImpulse(push.scale(100), e.body.position); return; }
   }
-  if(e.hp>0 && !isEscape){ e.hp--; spawnParticle(e.mesh.position,10,0xffaa00); const push=playerBody.position.vsub(e.body.position); push.normalize(); e.body.applyImpulse(push.scale(-500),e.body.position); if(e.hp>0)return; }
+  
+  if(e.hp>0 && !isEscape){ 
+      e.hp--; 
+      spawnParticle(e.mesh.position,10,0xffaa00); 
+      if(e.isBoss) {
+          spawnText("BOSS DAMAGE!", e.body.position, "#f00");
+          e.mesh.material.emissive.setHex(0x000000); 
+          setTimeout(() => { if(e.mesh) e.mesh.material.emissive.setHex(0x550022); }, 100);
+      }
+      const push=playerBody.position.vsub(e.body.position); push.normalize(); e.body.applyImpulse(push.scale(-500),e.body.position); 
+      if(e.hp>0) return; 
+  }
+  
+  spawnParticle(e.mesh.position, 25, 0xff0000); 
+  const blastPos = e.body.position.clone();
+  enemies.forEach(other => {
+      if(other !== e && !other.isBoss) {
+          const dist = other.body.position.distanceTo(blastPos);
+          if(dist < 5.0) {
+              const dir = other.body.position.vsub(blastPos).normalize();
+              other.body.applyImpulse(dir.scale(20), other.body.position);
+          }
+      }
+  });
+
   removeEnemy(e);
-  if(!isEscape) { spawnParticle(e.mesh.position,25,0xff0000); if(Math.random()<0.3) spawnItem(e.body.position); }
+  
+  if(gameState.missionType === 'boss_eater') {
+      if(e.isBoss) {
+          gameState.req = 0;
+          showMsg("BOSS DESTROYED", "#f0f");
+          actionGlobalMetsu(); 
+          setTimeout(nextWave, 4000);
+      } else {
+          spawnItem(e.body.position);
+          return; 
+      }
+  }
+
+  if(!isEscape) { if(Math.random()<0.3) spawnItem(e.body.position); }
   
   let p=false;
   if(gameState.missionType==='hunt'){ if(e.isTarget){gameState.req=0; p=true;} }
-  else if(gameState.req>0){ gameState.req--; p=true; }
+  else if(gameState.missionType!=='boss_eater' && gameState.req>0){ gameState.req--; p=true; }
+  
   if(p && gameState.req<=0) {
       showMsg(`WAVE ${gameState.wave} CLEAR`, "#fe0");
       if(vip){ world.removeBody(vip.body); scene.remove(vip.mesh); vip=null; els.vipBox.style.display="none"; if(vipGoalMesh){scene.remove(vipGoalMesh); vipGoalMesh=null;} }
@@ -254,11 +318,19 @@ function nextWave() { gameState.wave++; startWave(); }
 function startWave() {
     gameState.enemiesToSpawn=0; gameState.puzzle=null;
     const t=(gameState.wave-1)%5;
-    if(t===0){gameState.missionType='normal'; els.missionText.textContent="通常ミッション"; gameState.req=5;}
+    
+    if(t===4){
+        gameState.missionType='boss_eater'; 
+        els.missionText.textContent="上空の本体を叩け！"; 
+        gameState.req=1;
+        spawnEnemy('boss_eater_core');
+        for(let i=0;i<5;i++) spawnEnemy(); 
+    }
+    else if(t===0){gameState.missionType='normal'; els.missionText.textContent="通常ミッション"; gameState.req=5;}
     else if(t===1){gameState.missionType='annihilation'; els.missionText.textContent="殲滅戦"; gameState.enemiesToSpawn=8; gameState.req=8;}
     else if(t===2){gameState.missionType='hunt'; els.missionText.textContent="討伐戦"; gameState.req=1;}
     else if(t===3){gameState.missionType='boss_composite'; els.missionText.textContent="巨大構造物 解体作業"; gameState.req=1; spawnCompositeBoss();}
-    else if(t===4){gameState.missionType='boss_puzzle'; els.missionText.textContent="連携撃破"; gameState.req=1; spawnPuzzleBoss();}
+
     showMsg(`WAVE ${gameState.wave} START`, "#fff");
     if(gameState.missionType==='hunt') spawnEnemy('target');
     if(gameState.missionType==='annihilation') { for(let i=0;i<3;i++)spawnEnemy(); }
@@ -277,7 +349,6 @@ function removeKekkai(k) { if(currentTargetKekkai===k)currentTargetKekkai=null; 
 function setupEnvironment(mat){
   const sun=new THREE.DirectionalLight(0xffffee,1.2); sun.position.set(-50,100,50); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.camera.left=-100; sun.shadow.camera.right=100; sun.shadow.camera.top=100; sun.shadow.camera.bottom=-100; scene.add(sun); scene.add(new THREE.AmbientLight(0x555566,0.6));
   const gGeo=new THREE.PlaneGeometry(CFG.field.width+40,CFG.field.depth+40); const gMat=new THREE.MeshStandardMaterial({color:CFG.colors.ground,roughness:0.9});
-  // 【変更】地面をグローバル変数に代入
   groundMesh = new THREE.Mesh(gGeo,gMat); groundMesh.rotation.x=-Math.PI/2; groundMesh.receiveShadow=true; scene.add(groundMesh); const gBody=new CANNON.Body({mass:0,material:mat}); gBody.addShape(new CANNON.Plane()); gBody.quaternion.setFromEuler(-Math.PI/2,0,0); world.addBody(gBody);
   const createBox=(x,y,z,w,h,d,col,tr=false,op=1,rotY=0)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:col,transparent:tr,opacity:op})); m.position.set(x,y,z); m.rotation.y=rotY; m.castShadow=!tr; m.receiveShadow=true; scene.add(m); const b=new CANNON.Body({mass:0,material:mat}); b.addShape(new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))); b.position.copy(m.position); b.quaternion.copy(m.quaternion); world.addBody(b); return m; };
   const createVisualBox=(x,y,z,w,h,d,col,rotY=0)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:col})); m.position.set(x,y,z); m.rotation.y=rotY; m.castShadow=true; m.receiveShadow=true; scene.add(m); return m; };
@@ -355,33 +426,27 @@ function setupMobileInputs() {
 
   els.btnJump.addEventListener('touchstart',e=>{e.preventDefault(); if(Math.abs(playerBody.velocity.y)<1)playerBody.velocity.y=CFG.player.jump;});
   
-  // 【変更】距離ボタン：長押し（集中モード）とスワイプ/タップ（距離変更）の共存
   els.btnDist.addEventListener('touchstart',e=>{
     e.preventDefault();
     distTouchStart={x:e.changedTouches[0].clientX, y:e.changedTouches[0].clientY};
-    // 長押しタイマー開始
     distBtnLongPressTriggered = false;
     distBtnTimer = setTimeout(() => {
-        isFocusing = !isFocusing; // モード切替
+        isFocusing = !isFocusing; 
         showMsg(isFocusing ? "集中モード ON" : "集中モード OFF", "#f00");
-        distBtnLongPressTriggered = true; // 長押し成立フラグ
-    }, 1000); // 1秒
+        distBtnLongPressTriggered = true; 
+    }, 1000); 
   });
 
   els.btnDist.addEventListener('touchend',e=>{
     e.preventDefault();
-    if(distBtnTimer) clearTimeout(distBtnTimer); // 指が離れたらタイマー解除
-    
-    // 長押しが成立していた場合は、スワイプ判定を行わずに終了
+    if(distBtnTimer) clearTimeout(distBtnTimer); 
     if(distBtnLongPressTriggered) return;
-
-    // 既存のスワイプ/タップ判定ロジック
     const t=e.changedTouches[0]; const dx=t.clientX-distTouchStart.x, dy=t.clientY-distTouchStart.y;
-    if(Math.max(Math.abs(dx),Math.abs(dy))<10) { // Tap
+    if(Math.max(Math.abs(dx),Math.abs(dy))<10) { 
         if(currentDist<10)currentDist=15; else if(currentDist<20)currentDist=35; else currentDist=6;
-    } else { // Swipe
-        if(Math.abs(dx)>Math.abs(dy)) currentDist=15; // Side -> Mid
-        else { if(dy<0)currentDist=35; else currentDist=6; } // Up/Down
+    } else { 
+        if(Math.abs(dx)>Math.abs(dy)) currentDist=15; 
+        else { if(dy<0)currentDist=35; else currentDist=6; } 
     }
     els.distLabel.textContent = currentDist===6?"近":(currentDist===15?"中":"遠");
     showMsg(`射程: ${currentDist}m`, "#fff");
@@ -392,7 +457,13 @@ function setupMobileInputs() {
   
   els.modeBtn.addEventListener('touchstart',e=>{e.preventDefault(); e.stopPropagation(); isPhysMode=!isPhysMode; els.modeBtn.textContent=isPhysMode?"モード: 顕現":"モード: 幽体"; els.modeBtn.className=isPhysMode?"phys":"ghost"; els.btnDraw.style.background=isPhysMode?"linear-gradient(135deg,#FFD700,#FF8C00)":"linear-gradient(135deg,#03a9f4,#0288d1)"; els.btnDraw.innerHTML=isPhysMode?"顕<br><span style='font-size:10px'>Hold</span>":"結<br><span style='font-size:10px'>Hold</span>";});
 
-  els.btnDraw.addEventListener('touchstart',e=>{e.preventDefault(); if(drawId)return; const t=e.changedTouches[0]; drawId=t.identifier; els.btnDraw.classList.add('drawing');
+  els.btnDraw.addEventListener('touchstart',e=>{
+    e.preventDefault(); 
+    if(drawCooldown > 0) {
+        showMsg("共鳴妨害中...", "#f0f");
+        return;
+    }
+    if(drawId)return; const t=e.changedTouches[0]; drawId=t.identifier; els.btnDraw.classList.add('drawing');
     if(isPhysMode){ activePhysKekkai=createActiveMobile(); activePhysKekkai.startX=t.clientX; activePhysKekkai.startY=t.clientY; }
     else { 
         drawState.active=true; drawState.startX=t.clientX; drawState.startY=t.clientY; 
@@ -405,8 +476,8 @@ function setupMobileInputs() {
   });
   els.btnDraw.addEventListener('touchmove',e=>{e.preventDefault(); if(!drawId)return; for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===drawId){
     const t=e.changedTouches[i];
-    if(activePhysKekkai){ const dx=Math.abs(t.clientX-activePhysKekkai.startX)*0.06, dy=(activePhysKekkai.startY-t.clientY)*0.06; updateActiveMobile(activePhysKekkai,dx,dy); }
-    else if(drawState.ghost){ const dx=Math.abs(t.clientX-drawState.startX)*0.06 * 1.5, dy=(drawState.startY-t.clientY)*0.06 * 1.5; const s=1+Math.max(0,dx), sy=1+Math.max(0,dy); drawState.ghost.scale.set(s,sy,s); }
+    if(activePhysKekkai){ const dx=Math.abs(t.clientX-activePhysKekkai.startX)*0.03, dy=(activePhysKekkai.startY-t.clientY)*0.03; updateActiveMobile(activePhysKekkai,dx,dy); }
+    else if(drawState.ghost){ const dx=Math.abs(t.clientX-drawState.startX)*0.03 * 1.5, dy=(drawState.startY-t.clientY)*0.03 * 1.5; const s=1+Math.max(0,dx), sy=1+Math.max(0,dy); drawState.ghost.scale.set(s,sy,s); }
   }});
   els.btnDraw.addEventListener('touchend',e=>{e.preventDefault(); for(let i=0;i<e.changedTouches.length;i++)if(e.changedTouches[i].identifier===drawId){
     if(activePhysKekkai){ world.removeBody(activePhysKekkai.body); createKekkai(activePhysKekkai.mesh.position, activePhysKekkai.mesh.scale, activePhysKekkai.mesh.rotation.y, false); safeRemoveMesh(activePhysKekkai.mesh); activePhysKekkai=null; }
@@ -428,7 +499,8 @@ function handleVRInput() {
       if(Math.abs(stickX)>0.1 || Math.abs(stickY)>0.1) { const v=_vecDir.clone().multiplyScalar(-stickY).add(_vecRight.clone().multiplyScalar(-stickX)); playerBody.velocity.x=v.x*CFG.player.speed; playerBody.velocity.z=v.z*CFG.player.speed; } else { playerBody.velocity.x=0; playerBody.velocity.z=0; }
       if(gp.buttons[0].pressed){ if(!vrState.left.triggerHeld){actionKai(); vrState.left.triggerHeld=true;} } else vrState.left.triggerHeld=false;
       const grip=gp.buttons[1].pressed;
-      if(grip){ if(!vrState.left.drawing){ vrState.left.drawing=true; vrState.left.startHandPos.copy(ctrl.position); vrState.left.startOrigin.copy(aimMarker.position); vrState.left.startDir.copy(_vecDir); vrState.left.mesh=new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color:0xffff00, transparent:true, opacity:0.5})); scene.add(vrState.left.mesh); vrState.left.body=new CANNON.Body({mass:0, collisionFilterGroup:2, collisionFilterMask:1|2|4}); vrState.left.body.addShape(new CANNON.Box(new CANNON.Vec3(0.5,0.5,0.5))); vrState.left.body.position.copy(vrState.left.startOrigin); world.addBody(vrState.left.body); } else updateDynamicBarrier(vrState.left, ctrl.position, true); }
+      if(drawCooldown > 0 && grip) { /* Disabled */ }
+      else if(grip){ if(!vrState.left.drawing){ vrState.left.drawing=true; vrState.left.startHandPos.copy(ctrl.position); vrState.left.startOrigin.copy(aimMarker.position); vrState.left.startDir.copy(_vecDir); vrState.left.mesh=new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color:0xffff00, transparent:true, opacity:0.5})); scene.add(vrState.left.mesh); vrState.left.body=new CANNON.Body({mass:0, collisionFilterGroup:2, collisionFilterMask:1|2|4}); vrState.left.body.addShape(new CANNON.Box(new CANNON.Vec3(0.5,0.5,0.5))); vrState.left.body.position.copy(vrState.left.startOrigin); world.addBody(vrState.left.body); } else updateDynamicBarrier(vrState.left, ctrl.position, true); }
       else if(vrState.left.drawing){ createKekkai(vrState.left.mesh.position, vrState.left.mesh.scale, 0, false); safeRemoveMesh(vrState.left.mesh); world.removeBody(vrState.left.body); vrState.left.drawing=false; }
     } else {
       if(Math.abs(gp.axes[2])>0.2) camAngle.yaw-=gp.axes[2]*0.04;
@@ -436,7 +508,8 @@ function handleVRInput() {
       if(gp.buttons[5].pressed){ if(!vrState.right.bBtnHeld){vrState.right.bBtnHeld=true; vrState.right.lastDistZ=ctrl.position.z;} const dz=(vrState.right.lastDistZ-ctrl.position.z)*20; currentDist=Math.max(0,Math.min(40,currentDist+dz)); vrState.right.lastDistZ=ctrl.position.z; } else vrState.right.bBtnHeld=false;
       if(gp.buttons[0].pressed){ if(!vrState.right.triggerHeld){actionMetsu(); vrState.right.triggerHeld=true;} } else vrState.right.triggerHeld=false;
       const grip=gp.buttons[1].pressed;
-      if(grip){ 
+      if(drawCooldown > 0 && grip) { /* Disabled */ }
+      else if(grip){ 
           if(!vrState.right.drawing){ 
               vrState.right.drawing=true; vrState.right.startHandPos.copy(ctrl.position); vrState.right.startOrigin.copy(aimMarker.position); vrState.right.startDir.copy(_vecDir); 
               const g=new THREE.BoxGeometry(1,1,1); const m=new THREE.MeshBasicMaterial({color:0x00ffff, transparent:true, opacity:0.2}); 
@@ -490,18 +563,13 @@ function updateAimMarker() {
   camera.updateMatrixWorld(true);
   camera.getWorldPosition(_vecPos); camera.getWorldDirection(_vecDir);
 
-  // 【変更】集中モードか通常モードかで挙動を分岐
   if (isFocusing) {
-    // ■ 集中モード（レーザーポインター式）
     focusLaser.visible = true;
-    aimMarker.material.color.setHex(0xff0000); // 赤色に
+    aimMarker.material.color.setHex(0xff0000); 
 
-    // レーザーの始点
     const rayStart = _vecPos.clone();
-    // 画面中央へレイを飛ばす
     raycaster.set(rayStart, _vecDir);
 
-    // 衝突対象：敵、地面
     const targets = enemies.map(e => e.mesh);
     if(groundMesh) targets.push(groundMesh);
 
@@ -511,34 +579,25 @@ function updateAimMarker() {
     if (hits.length > 0) {
         targetPoint = hits[0].point;
     } else {
-        // 何もなければ100m先
         targetPoint = rayStart.clone().add(_vecDir.clone().multiplyScalar(100));
     }
     
-    // マーカー移動
     aimMarker.position.copy(targetPoint);
     
-    // レーザー描画更新
     const positions = focusLaser.geometry.attributes.position.array;
-    // 始点（カメラより少し下）
     positions[0] = rayStart.x; positions[1] = rayStart.y - 0.2; positions[2] = rayStart.z;
-    // 終点
     positions[3] = targetPoint.x; positions[4] = targetPoint.y; positions[5] = targetPoint.z;
     focusLaser.geometry.attributes.position.needsUpdate = true;
     
-    // ターゲット結界の選択（スナップ用ではなく情報用として）
     currentTargetKekkai = null;
 
   } else {
-    // ■ 通常モード（距離固定 + スナップ）
     focusLaser.visible = false;
     aimMarker.material.color.setHex(CFG.colors.marker);
 
-    // 既存ロジック：固定距離へ移動
     aimMarker.position.copy(_vecPos).add(_vecDir.clone().multiplyScalar(currentDist));
     aimMarker.rotation.y = Math.atan2(_vecDir.x, _vecDir.z);
     
-    // 結界へのスナップロジック
     let bestCandidate = null;
     raycaster.set(_vecPos, _vecDir);
     const intersects = raycaster.intersectObjects(kekkaiList.map(k => k.mesh));
@@ -567,9 +626,16 @@ function loop(t) {
   const dt=Math.min((t-lastT)/1000, 0.1); lastT=t;
   world.step(1/60, dt, 3);
   
-  // SP Logic (Maintain Cost)
+  if(drawCooldown > 0) {
+      drawCooldown -= dt;
+      if(drawCooldown <= 0) showMsg("再構成可能", "#0ff");
+  }
+
+  // 【修正】無敵時間の更新
+  if(damageCooldown > 0) damageCooldown -= dt;
+
   gameState.playerSp = Math.min(100, gameState.playerSp + CFG.kekkai.spRegen*dt);
-  const maintainCost = kekkaiList.length * 1.0; // 1 SP per barrier
+  const maintainCost = kekkaiList.length * 1.0; 
   gameState.playerSp -= maintainCost * dt;
   if(gameState.playerSp <= 0) { gameState.playerSp = 0; if(kekkaiList.length>0){ actionGlobalKai(); showMsg("霊力枯渇!!", "#f00"); } }
 
@@ -589,12 +655,11 @@ function loop(t) {
   
   updateAimMarker();
 
-  const target = enemies.find(e=>e.isTarget);
+  const target = enemies.find(e=>e.isTarget || e.isBoss);
   if(target && targetArrow) {
     targetArrow.visible=true;
     camera.getWorldPosition(_vecPos); camera.getWorldDirection(_vecDir);
     _vecRight.crossVectors(_vecDir, _vecUp).normalize();
-    // Arrow Offset (Right & Smaller)
     targetArrow.scale.set(0.6, 0.6, 0.6);
     targetArrow.position.copy(_vecPos).add(_vecDir.multiplyScalar(1.5)).add(_vecRight.multiplyScalar(0.4));
     targetArrow.lookAt(target.body.position.x, target.body.position.y, target.body.position.z);
@@ -611,6 +676,116 @@ function loop(t) {
   });
 
   const fW=CFG.field.width, fD=CFG.field.depth;
+  
+  if(gameState.missionType === 'boss_eater') {
+      enemies.forEach(e => {
+          
+          const distToPlayer = e.body.position.distanceTo(playerBody.position);
+          if (distToPlayer < 2.0) { takeDamage(1); }
+
+          if(e.body.velocity.y > 10) e.body.velocity.y *= 0.9; 
+
+          if(!e.isBoss) {
+              e.body.applyForce(new CANNON.Vec3(0, 30 * e.body.mass, 0), e.body.position); 
+
+              if(e.body.position.y > 50) {
+                  e.body.applyForce(new CANNON.Vec3(0, -100 * e.body.mass, 0), e.body.position);
+              }
+
+              let targetK = null;
+              let targetType = 'none';
+              let minD = 999;
+              const enemyPos = new THREE.Vector3(e.body.position.x, e.body.position.y, e.body.position.z);
+              
+              kekkaiList.forEach(k => {
+                  const d = enemyPos.distanceTo(k.mesh.position);
+                  if(d < 80 && d < minD) { minD = d; targetK = k; targetType='static'; }
+              });
+              if(activePhysKekkai) {
+                  const d = enemyPos.distanceTo(activePhysKekkai.mesh.position);
+                  if(d < 80 && d < minD) { minD = d; targetK = activePhysKekkai; targetType='active_mobile'; }
+              }
+              ['left', 'right'].forEach(hand => {
+                  if(vrState[hand].drawing && vrState[hand].mesh) {
+                       const d = enemyPos.distanceTo(vrState[hand].mesh.position);
+                       if(d < 80 && d < minD) { minD = d; targetK = vrState[hand]; targetType='active_vr'; }
+                  }
+              });
+
+              let targetPos = targetK ? ((targetType === 'active_vr') ? targetK.mesh.position : targetK.mesh.position) : playerBody.position;
+              
+              const diffY = targetPos.y - enemyPos.y;
+              let moveDir = new THREE.Vector3().subVectors(targetPos, enemyPos).normalize();
+              if (diffY > 5.0) { 
+                  moveDir.y += 0.8; 
+                  moveDir.normalize(); 
+              }
+
+              const speed = targetK ? 35 : 20;
+              const totalForce = moveDir.clone().multiplyScalar(speed);
+
+              const separationForce = new THREE.Vector3();
+              let neighbors = 0;
+              enemies.forEach(other => {
+                  if(e !== other && !other.isBoss) {
+                      const dist = e.body.position.distanceTo(other.body.position);
+                      if(dist < 4.0) { 
+                          const push = new THREE.Vector3().subVectors(enemyPos, other.body.position).normalize();
+                          separationForce.add(push.multiplyScalar(15.0 / (dist + 0.1)));
+                          neighbors++;
+                      }
+                  }
+              });
+              if(neighbors > 0) totalForce.add(separationForce);
+
+              e.body.applyForce(new CANNON.Vec3(totalForce.x, totalForce.y, totalForce.z), e.body.position);
+              
+              if(targetK) {
+                  let eaten = false;
+                  if (targetK.mesh && targetK.mesh.geometry) {
+                      const box = new THREE.Box3().setFromObject(targetK.mesh);
+                      const enemySphere = new THREE.Sphere(enemyPos, 1.2); 
+                      if (box.intersectsSphere(enemySphere)) {
+                          eaten = true;
+                      }
+                  }
+
+                  if(eaten) {
+                      spawnParticle(e.mesh.position, 20, 0xff00ff);
+                      if(targetType === 'static') {
+                          removeKekkai(targetK);
+                      } else if(targetType === 'active_mobile') {
+                          world.removeBody(activePhysKekkai.body); safeRemoveMesh(activePhysKekkai.mesh); activePhysKekkai=null;
+                          drawId=null; els.btnDraw.classList.remove('drawing');
+                          drawCooldown = 0.5; showMsg("共鳴破壊!!", "#f0f");
+                      } else if(targetType === 'active_vr') {
+                          world.removeBody(targetK.body); safeRemoveMesh(targetK.mesh); targetK.drawing=false; targetK.mesh=null;
+                          drawCooldown = 0.5; showMsg("共鳴破壊!!", "#f0f");
+                      }
+                  }
+              }
+
+          } else {
+              e.body.applyForce(new CANNON.Vec3(0, 30 * e.body.mass, 0), e.body.position);
+
+              const time = t * 0.001;
+              const hoverY = 40 + Math.sin(time + e.floatOffset) * 5; 
+              const targetX = Math.sin(time * 0.5) * 20; 
+              const targetZ = Math.cos(time * 0.5) * 20; 
+              
+              const forceX = (targetX - e.body.position.x) * 300; 
+              const forceY = (hoverY - e.body.position.y) * 300;
+              const forceZ = (targetZ - e.body.position.z) * 300;
+              
+              e.body.applyForce(new CANNON.Vec3(forceX, forceY, forceZ), e.body.position);
+              e.body.angularVelocity.set(0, 0.5, 0); 
+          }
+      });
+      if(t > gameState.nextSpawn) { spawnEnemy(); gameState.nextSpawn = t + 2000; }
+  } else {
+      if(t>gameState.nextSpawn) { spawnEnemy(); gameState.nextSpawn=t+3000-gameState.wave*100; }
+  }
+
   enemies.forEach(e=>{
     e.mesh.position.copy(e.body.position); e.mesh.quaternion.copy(e.body.quaternion);
     if(e.body.position.y<-10) killEnemy(e);
@@ -623,7 +798,7 @@ function loop(t) {
       } else e.body.outsideTimer=(e.body.outsideTimer||0)+dt;
     } else {
       e.body.outsideTimer=0;
-      if(!e.isCompositeCore){
+      if(gameState.missionType!=='boss_eater' && !e.isCompositeCore && !e.isBoss){
         const tgt=(vip&&vip.hp>0)?vip.body.position:playerBody.position;
         const d=tgt.vsub(e.body.position); d.normalize();
         e.body.applyForce(d.scale(20), e.body.position);
@@ -631,7 +806,6 @@ function loop(t) {
     }
   });
 
-  if(t>gameState.nextSpawn) { spawnEnemy(); gameState.nextSpawn=t+3000-gameState.wave*100; }
   items.forEach(it=>{ it.mesh.position.copy(it.body.position); it.mesh.rotation.y+=0.05; if(playerBody.position.distanceTo(it.body.position)<2){ healPlayer(20); safeRemoveMesh(it.mesh); world.removeBody(it.body); items=items.filter(i=>i!==it); } });
 
   renderer.render(scene, camera);
@@ -663,7 +837,6 @@ function init() {
     aimMarker = new THREE.Mesh(new THREE.SphereGeometry(0.3), new THREE.MeshBasicMaterial({color:CFG.colors.marker, transparent:true, opacity:0.7, depthTest:false})); scene.add(aimMarker);
     targetArrow = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 8), new THREE.MeshBasicMaterial({color:0xffffff, depthTest:false, transparent:true, opacity:0.8})); targetArrow.visible=false; scene.add(targetArrow);
 
-    // 【追加】レーザー照準の初期化
     const lGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
     const lMat = new THREE.LineBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.7 });
     focusLaser = new THREE.Line(lGeo, lMat);
@@ -683,7 +856,15 @@ function init() {
   } catch(e) { console.error(e); alert("Init Error: "+e.message); }
 }
 
-function takeDamage(v){ gameState.playerHp=Math.max(0,gameState.playerHp-v); els.dmgOverlay.style.opacity=0.5; setTimeout(()=>els.dmgOverlay.style.opacity=0,150); if(gameState.playerHp<=0)showMsg("GAME OVER","#f00"); }
+// 【修正】無敵時間チェックを追加
+function takeDamage(v){ 
+  if(damageCooldown > 0) return;
+  gameState.playerHp=Math.max(0,gameState.playerHp-v); 
+  damageCooldown = 1.0; 
+  els.dmgOverlay.style.opacity=0.5; 
+  setTimeout(()=>els.dmgOverlay.style.opacity=0,150); 
+  if(gameState.playerHp<=0)showMsg("GAME OVER","#f00"); 
+}
 function healPlayer(v){ gameState.playerHp=Math.min(CFG.player.maxHp, gameState.playerHp+v); showMsg("RECOVER","#0f0"); }
 
 window.onload = init;
